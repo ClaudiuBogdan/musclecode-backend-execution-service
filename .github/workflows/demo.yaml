@@ -1,0 +1,27 @@
+name: Deploy Application with Bitwarden Secrets
+
+on: [push]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v2
+
+    # Retrieve secrets from Bitwarden
+    - name: Get Secrets from Bitwarden
+      uses: bitwarden/sm-action@v1
+      with:
+        access_token: ${{ secrets.BW_ACCESS_TOKEN }}
+        secrets: |
+            dev/backend/hello > SECRET_NAME_1
+            prod/backend/hello > SECRET_NAME_2
+
+    # Example usage of secrets in subsequent steps
+    - name: Use Secrets for Deployment
+      run: |
+        echo "Using secret for deployment..."
+        echo $SECRET_NAME_1
+        echo $SECRET_NAME_2
