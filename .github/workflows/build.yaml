@@ -36,4 +36,4 @@ jobs:
       with:
         context: .
         push: true
-        tags: backend-dev:latest # Replace with your Docker image name and env tag
+        tags: ${{ env.DOCKER_REGISTRY_URL }}/backend-dev:latest # Replace with your Docker image name and env tag
