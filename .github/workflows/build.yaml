@@ -1,0 +1,39 @@
+name: Build and Push Docker image
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+
+    # Retrieve secrets from Bitwarden
+    - name: Get Secrets from Bitwarden
+      uses: bitwarden/sm-action@v1
+      with:
+        access_token: ${{ secrets.BW_ACCESS_TOKEN }}
+        secrets: |
+          90da3992-d626-4980-948f-b12c0115c8c4 > DOCKER_REGISTRY_URL
+          142e182c-79df-4386-9c9f-b12c01160277 > DOCKER_USERNAME
+          9fa35cc3-a67f-4ff4-833f-b12c01162004 > DOCKER_PASSWORD
+    
+    - name: Login to Docker Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.DOCKER_REGISTRY_URL }}
+        username: ${{ env.DOCKER_USERNAME }}
+        password: ${{ env.DOCKER_PASSWORD }}
+
+    - name: Build and push
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: backend-dev:latest # Replace with your Docker image name and env tag
