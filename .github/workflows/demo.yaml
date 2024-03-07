@@ -22,5 +22,5 @@ jobs:
     - name: Use Secrets for Deployment
       run: |
         echo "Using secret for deployment..."
-        echo $SECRET_NAME_1
+        echo "First two characters: ${SECRET_NAME_1:0:2}" 
         echo $SECRET_NAME_2
