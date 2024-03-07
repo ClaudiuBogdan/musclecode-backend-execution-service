@@ -16,8 +16,6 @@ jobs:
       with:
         access_token: ${{ secrets.BW_ACCESS_TOKEN }}
         secrets: |
-            # dev/backend/hello > SECRET_NAME_1
-            # prod/backend/hello > SECRET_NAME_2
             demo > SECRET_NAME_1
 
     # Example usage of secrets in subsequent steps
