@@ -42,14 +42,14 @@ jobs:
 
 
             # Set the target private cluster.
-      - uses: azure/k8s-set-context@v1
+      - uses: azure/k8s-set-context@v3
         with:
           method: service-account
           k8s-url: ${{ env.K8S_CLUSTER_URL }}
           token: ${{ env.K8S_SERVICE_ACCOUNT_TOKEN }}
         id: setcontext
 
-      - uses: Azure/k8s-create-secret@v1.1
+      - uses: Azure/k8s-create-secret@v4
         with:
           container-registry-url: ${{ env.DOCKER_REGISTRY_URL }}
           container-registry-username: ${{ env.DOCKER_USERNAME }}
