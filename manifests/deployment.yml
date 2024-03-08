@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: backend-dev
-        image: dailykatas/backend-dev:latest
+        image: harbor.devostack.com/dailykatas/backend-dev:latest
         ports:
         - containerPort: 3000
       imagePullSecrets:
