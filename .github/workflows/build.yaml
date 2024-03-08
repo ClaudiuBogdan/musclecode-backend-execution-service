@@ -37,9 +37,9 @@ jobs:
         with:
           context: .
           push: true
-          tags:
-            ${{ env.DOCKER_REGISTRY_URL }}/backend-dev:${{ github.sha }} # Replace with your Docker image name and env tag
-
+          tags: |
+            dailykatas/backend-dev:${{ github.sha }}
+            dailykatas/backend-dev:latest
 
             # Set the target private cluster.
       - uses: azure/k8s-set-context@v3
