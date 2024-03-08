@@ -23,7 +23,7 @@ jobs:
             142e182c-79df-4386-9c9f-b12c01160277 > DOCKER_USERNAME
             9fa35cc3-a67f-4ff4-833f-b12c01162004 > DOCKER_PASSWORD
             53e4d839-6916-4a39-a4c7-b12d00e21ea2 > K8S_CLUSTER_URL
-            6c24c737-412f-4687-aa41-b12d00df3f6d > K8S_SERVICE_ACCOUNT_TOKEN
+            6c24c737-412f-4687-aa41-b12d00df3f6d > K8S_SERVICE_ACCOUNT_SECRET
 
       - name: Login to Docker Registry
         uses: docker/login-action@v3
@@ -46,7 +46,7 @@ jobs:
         with:
           method: service-account
           k8s-url: ${{ env.K8S_CLUSTER_URL }}
-          token: ${{ env.K8S_SERVICE_ACCOUNT_TOKEN }}
+          k8s-secret: ${{ env.K8S_SERVICE_ACCOUNT_SECRET }}
         id: setcontext
 
       - uses: Azure/k8s-create-secret@v4
