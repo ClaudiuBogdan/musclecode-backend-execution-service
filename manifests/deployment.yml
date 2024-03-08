@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-dev-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend-dev
+  template:
+    metadata:
+      labels:
+        app: backend-dev
+    spec:
+      containers:
+      - name: backend-dev
+        image: dailykatas/backend-dev:latest
+        ports:
+        - containerPort: 3000
+      imagePullSecrets:
+      - name: docker-k8s-secret
