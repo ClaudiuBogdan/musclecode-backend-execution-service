@@ -46,7 +46,7 @@ jobs:
         with:
           method: service-account
           k8s-url: ${{ env.K8S_CLUSTER_URL }}
-          k8s-secret: ${{ env.K8S_SERVICE_ACCOUNT_TOKEN }}
+          token: ${{ env.K8S_SERVICE_ACCOUNT_TOKEN }}
         id: setcontext
 
       - uses: Azure/k8s-create-secret@v1.1
