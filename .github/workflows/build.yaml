@@ -53,7 +53,7 @@ jobs:
         with:
           container-registry-url: ${{ env.DOCKER_REGISTRY_URL }}
           container-registry-username: ${{ env.DOCKER_USERNAME }}
-          container-registry-password: ${{ env.REGISTRY_PASSWORD }}
+          container-registry-password: ${{ env.DOCKER_PASSWORD }}
           secret-name: docker-k8s-secret
 
       - uses: Azure/k8s-deploy@v4
