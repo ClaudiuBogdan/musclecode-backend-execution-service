@@ -10,30 +10,60 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Retrieve secrets from Bitwarden
+      - name: Get Secrets from Bitwarden
+        uses: bitwarden/sm-action@v1
+        with:
+          access_token: ${{ secrets.BW_ACCESS_TOKEN }}
+          secrets: |
+            90da3992-d626-4980-948f-b12c0115c8c4 > DOCKER_REGISTRY_URL
+            142e182c-79df-4386-9c9f-b12c01160277 > DOCKER_USERNAME
+            9fa35cc3-a67f-4ff4-833f-b12c01162004 > DOCKER_PASSWORD
+            53e4d839-6916-4a39-a4c7-b12d00e21ea2 > K8S_CLUSTER_URL
+            6c24c737-412f-4687-aa41-b12d00df3f6d > K8S_SERVICE_ACCOUNT_TOKEN
+
+      - name: Login to Docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.DOCKER_REGISTRY_URL }}
+          username: ${{ env.DOCKER_USERNAME }}
+          password: ${{ env.DOCKER_PASSWORD }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags:
+            ${{ env.DOCKER_REGISTRY_URL }}/backend-dev:${{ github.sha }} # Replace with your Docker image name and env tag
 
 
-    # Retrieve secrets from Bitwarden
-    - name: Get Secrets from Bitwarden
-      uses: bitwarden/sm-action@v1
-      with:
-        access_token: ${{ secrets.BW_ACCESS_TOKEN }}
-        secrets: |
-          90da3992-d626-4980-948f-b12c0115c8c4 > DOCKER_REGISTRY_URL
-          142e182c-79df-4386-9c9f-b12c01160277 > DOCKER_USERNAME
-          9fa35cc3-a67f-4ff4-833f-b12c01162004 > DOCKER_PASSWORD
-    
-    - name: Login to Docker Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.DOCKER_REGISTRY_URL }}
-        username: ${{ env.DOCKER_USERNAME }}
-        password: ${{ env.DOCKER_PASSWORD }}
+            # Set the target private cluster.
+      - uses: azure/k8s-set-context@v1
+        with:
+          method: service-account
+          k8s-url: ${{ env.K8S_CLUSTER_URL }}
+          k8s-secret: ${{ env.K8S_SERVICE_ACCOUNT_TOKEN }}
+        id: setcontext
 
-    - name: Build and push
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        push: true
-        tags: ${{ env.DOCKER_REGISTRY_URL }}/backend-dev:latest # Replace with your Docker image name and env tag
+      - uses: Azure/k8s-create-secret@v1.1
+        with:
+          container-registry-url: ${{ env.DOCKER_REGISTRY_URL }}
+          container-registry-username: ${{ env.DOCKER_USERNAME }}
+          container-registry-password: ${{ env.REGISTRY_PASSWORD }}
+          secret-name: docker-k8s-secret
+
+      - uses: Azure/k8s-deploy@v4
+        with:
+          action: deploy
+          namespace: 'dailykatas'
+          manifests: |
+            manifests/deployment.yml
+            manifests/service.yml
+          images: |
+            dailykatas/backend-dev:${{ github.sha }}
+          imagepullsecrets: |
+            docker-k8s-secret
