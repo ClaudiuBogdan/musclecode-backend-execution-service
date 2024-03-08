@@ -41,7 +41,7 @@ jobs:
             dailykatas/backend-dev:${{ github.sha }}
             dailykatas/backend-dev:latest
 
-            # Set the target private cluster.
+      # Set the target private cluster.
       - uses: azure/k8s-set-context@v3
         with:
           method: service-account
