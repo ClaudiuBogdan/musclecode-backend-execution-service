@@ -64,6 +64,7 @@ jobs:
           manifests: |
             manifests/deployment.yml
             manifests/service.yml
+            manifests/egress.yml
           images: |
             dailykatas/backend-dev:${{ github.sha }}
           imagepullsecrets: |

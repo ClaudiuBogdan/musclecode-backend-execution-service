@@ -12,10 +12,38 @@ spec:
       labels:
         app: backend-dev
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001 # Ensure this user exists in your Docker image
       containers:
       - name: backend-dev
         image: harbor.devostack.com/dailykatas/backend-dev:latest
         ports:
         - containerPort: 3000
+        securityContext:
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "250m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        env:
+          - name: NODE_ENV
+            value: "production"
+        livenessProbe:
+          httpGet:
+            path: /healthz # Adjust this to your application's health check endpoint
+            port: 3000
+          initialDelaySeconds: 3
+          periodSeconds: 3
+        readinessProbe:
+          httpGet:
+            path: /healthz # Adjust this to your application's health check endpoint
+            port: 3000
+          initialDelaySeconds: 3
+          periodSeconds: 3
       imagePullSecrets:
       - name: docker-k8s-secret
