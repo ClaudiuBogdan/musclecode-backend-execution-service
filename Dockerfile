@@ -1,15 +1,22 @@
 #
 # 🧑‍💻 Base Image for Shared Configuration
 #
-FROM node:21-alpine as base
+FROM node:21-bullseye as base
 # Add necessary packages for installing Firejail and AppArmor
-RUN apk add --no-cache libc6-compat firejail apparmor apparmor-utils
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    firejail \
+    apparmor \
+    apparmor-utils \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 # Create non-root user for Docker
 RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nodejs
+    adduser --system --uid 1001 nodejs 
+
+RUN chown nodejs:nodejs /app
+
 
 # Ensure safety
 USER nodejs
