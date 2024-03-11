@@ -5,7 +5,7 @@ metadata:
   name: deployment-role
 rules:
 - apiGroups: [""]
-  resources: ["services", "pods"]
+  resources: ["services", "pods", secrets]
   verbs: ["*"]
 - apiGroups: ["apps"]
   resources: ["deployments"]
