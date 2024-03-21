@@ -5,11 +5,14 @@ metadata:
   name: deployment-role
 rules:
 - apiGroups: [""]
-  resources: ["services", "pods", "secrets", "jobs"]
+  resources: ["services", "pods", "secrets"]
   verbs: ["*"]
 - apiGroups: ["apps"]
   resources: ["deployments"]
   verbs: ["*"]
 - apiGroups: ["networking.k8s.io"]
   resources: ["networkpolicies"]
+  verbs: ["*"]
+- apiGroups: ["batch"]
+  resources: ["jobs"]
   verbs: ["*"]
