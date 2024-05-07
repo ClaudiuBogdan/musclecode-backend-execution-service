@@ -20,15 +20,19 @@ export class ExecuteService {
     await this.fileService.createFiles(filesPath, payload);
 
     // Execute code
-    const { results, error } = await executeCode(filesPath, payload.language);
+    const { results, passed, error } = await executeCode(
+      filesPath,
+      payload.language,
+    );
 
     // Delete the files and directories
-    await this.fileService.removeDirectory(filesPath);
+    // await this.fileService.removeDirectory(filesPath); // TODO: Uncomment this line
 
     const response: ExecuteCodeResponse = {
       testId: payload.test.id,
       userId: payload.userId,
       results,
+      passed,
       error,
     };
 

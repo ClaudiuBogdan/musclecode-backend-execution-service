@@ -113,6 +113,9 @@ export class ExecuteCodeResponse {
   @Type(() => TestResult)
   results: TestResult[];
 
+  @IsBoolean()
+  passed: boolean;
+
   @IsArray()
   @IsOptional()
   @ValidateNested({ each: true })

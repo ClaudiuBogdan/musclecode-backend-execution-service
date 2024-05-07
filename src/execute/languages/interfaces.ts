@@ -10,5 +10,6 @@ export interface FileWriterStrategy {
 
 export interface CodeExecutionResponse {
   results: TestResult[];
+  passed: boolean;
   error?: string;
 }

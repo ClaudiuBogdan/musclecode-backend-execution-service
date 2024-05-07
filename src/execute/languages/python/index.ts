@@ -23,10 +23,12 @@ export class PythonExecutor implements CodeExecutionStrategy {
       };
     });
 
+    const passed = !results.some((result) => !result.passed);
+
     const error = results.find((result) => result.outcome === 'failed')?.call
       ?.longrepr;
 
-    return { results, error };
+    return { results, passed, error };
   }
 }
 

@@ -10,28 +10,37 @@ import jestConfig from './jest.config';
 
 export class TypeScriptExecutor implements CodeExecutionStrategy {
   async execute(codePath: string): Promise<CodeExecutionResponse> {
-    const output = await exec(codePath, 'jest --json');
+    try {
+      const output = await exec(codePath, 'jest --json');
+      const jestOutput = JSON.parse(output);
 
-    const jestOutput = JSON.parse(output);
-    const results = jestOutput.testResults.flatMap((testResult) =>
-      testResult.assertionResults.map((test) => {
+      if (!jestOutput.testResults || jestOutput.testResults.length === 0) {
         return {
+          results: [],
+          passed: false,
+          error: 'No test results found or compilation failed.',
+        };
+      }
+
+      const results = jestOutput.testResults.flatMap((testResult) =>
+        testResult.assertionResults.map((test) => ({
           id: test.fullName,
           passed: test.status === 'passed',
           error:
             test.status === 'failed'
-              ? test.failureDetails[0].matcherResult.message
+              ? test.failureDetails[0]?.matcherResult?.message
               : undefined,
-        };
-      }),
-    );
-
-    const error = jestOutput.testResults[0].message;
-
-    return { results, error };
+        })),
+      );
+      const passed = !results.some((result) => !result.passed);
+      const error = jestOutput.testResults[0]?.message || undefined;
+      return { results, passed, error };
+    } catch (err) {
+      console.error('Error executing jest:', err);
+      return { results: [], passed: false, error: err.message };
+    }
   }
 }
-
 export class TypeScriptFileWriter implements FileWriterStrategy {
   async write(
     filePath: string,
