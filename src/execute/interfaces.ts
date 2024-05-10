@@ -70,6 +70,10 @@ export class TestData {
 export class ExecuteCodeDTO {
   @IsString()
   @IsNotEmpty()
+  submissionId: string;
+
+  @IsString()
+  @IsNotEmpty()
   userId: string;
 
   @IsObject()
@@ -100,6 +104,10 @@ export class TestResult {
 }
 
 export class ExecuteCodeResponse {
+  @IsString()
+  @IsNotEmpty()
+  submissionId: string;
+
   @IsString()
   @IsNotEmpty()
   testId: string;

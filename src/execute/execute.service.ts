@@ -29,6 +29,7 @@ export class ExecuteService {
     // await this.fileService.removeDirectory(filesPath); // TODO: Uncomment this line
 
     const response: ExecuteCodeResponse = {
+      submissionId: payload.submissionId,
       testId: payload.test.id,
       userId: payload.userId,
       results,
