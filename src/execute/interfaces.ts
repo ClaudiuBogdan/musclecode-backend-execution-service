@@ -1,70 +1,19 @@
 import {
   IsString,
   IsNotEmpty,
-  IsUUID,
   IsArray,
   ValidateNested,
-  IsObject,
   IsOptional,
   IsBoolean,
+  IsEnum,
+  IsNumber,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
-export class FileData {
-  @IsUUID()
-  id: string;
-
-  @IsString()
-  @IsNotEmpty()
-  filename: string;
-
-  @IsString()
-  @IsNotEmpty()
-  extension: string;
-
-  @IsString()
-  @IsNotEmpty()
-  content: string;
-}
-
-export class UserCode {
-  @IsObject()
-  @ValidateNested()
-  @Type(() => FileData)
-  file: FileData;
-
-  @IsString()
-  @IsNotEmpty()
-  functionName: string;
-}
-
-export class TestArg {
-  @IsString()
-  @IsNotEmpty()
-  id: string;
-
-  @IsString()
-  arg: string;
-
-  @IsString()
-  expected: string;
-}
-
-export class TestData {
-  @IsString()
-  @IsNotEmpty()
-  id: string;
-
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => FileData)
-  @IsOptional()
-  customTests?: FileData[];
-
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => TestArg)
-  args: TestArg[];
+export enum CodeLanguage {
+  PYTHON = 'python',
+  JAVASCRIPT = 'javascript',
+  TYPESCRIPT = 'typescript',
 }
 
 export class ExecuteCodeDTO {
@@ -76,61 +25,180 @@ export class ExecuteCodeDTO {
   @IsNotEmpty()
   userId: string;
 
-  @IsObject()
-  @ValidateNested()
-  @Type(() => UserCode)
-  userCode: UserCode;
+  @IsString()
+  @IsNotEmpty()
+  code: string;
 
-  @IsObject()
-  @ValidateNested()
-  @Type(() => TestData)
-  test: TestData;
+  @IsNotEmpty()
+  @IsEnum(CodeLanguage)
+  language: CodeLanguage;
+}
+
+export class TestItem {
+  @IsString()
+  @IsEnum(['describe', 'it', 'failed', 'passed', 'completedin', 'error'])
+  t: 'describe' | 'it' | 'failed' | 'passed' | 'completedin' | 'error';
 
   @IsString()
   @IsNotEmpty()
-  language: string;
+  v: string;
+
+  @IsBoolean()
+  p: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => TestItem)
+  items?: TestItem[];
+}
+
+export class HiddenStats {
+  @IsNumber()
+  passed: number;
+
+  @IsNumber()
+  failed: number;
+}
+
+export class AssertionsStats {
+  @IsNumber()
+  passed: number;
+
+  @IsNumber()
+  failed: number;
+
+  @ValidateNested()
+  @Type(() => HiddenStats)
+  hidden: HiddenStats;
+}
+
+export class SpecsStats {
+  @IsNumber()
+  passed: number;
+
+  @IsNumber()
+  failed: number;
+
+  @ValidateNested()
+  @Type(() => HiddenStats)
+  hidden: HiddenStats;
+}
+
+export class UnweightedStats {
+  @IsNumber()
+  passed: number;
+
+  @IsNumber()
+  failed: number;
+}
+
+export class WeightedStats {
+  @IsNumber()
+  passed: number;
+
+  @IsNumber()
+  failed: number;
 }
 
 export class TestResult {
-  @IsString()
-  id: string;
+  @IsBoolean()
+  serverError: boolean;
 
   @IsBoolean()
-  passed: boolean;
+  completed: boolean;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => TestItem)
+  output: TestItem[];
+
+  @IsString()
+  @IsEnum(['assertions'])
+  successMode: 'assertions';
+
+  @IsNumber()
+  passed: number;
+
+  @IsNumber()
+  failed: number;
+
+  @IsNumber()
+  errors: number;
 
   @IsString()
   @IsOptional()
-  error?: string;
+  error: string | null;
+
+  @ValidateNested()
+  @Type(() => AssertionsStats)
+  assertions: AssertionsStats;
+
+  @ValidateNested()
+  @Type(() => SpecsStats)
+  specs: SpecsStats;
+
+  @ValidateNested()
+  @Type(() => UnweightedStats)
+  unweighted: UnweightedStats;
+
+  @ValidateNested()
+  @Type(() => WeightedStats)
+  weighted: WeightedStats;
+
+  @IsBoolean()
+  timedOut: boolean;
+
+  @IsNumber()
+  wallTime: number;
+
+  @IsNumber()
+  testTime: number;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  tags: string[] | null;
 }
 
-export class ExecuteCodeResponse {
+export class CodeExecutionResponse {
   @IsString()
-  @IsNotEmpty()
-  submissionId: string;
+  @IsEnum(['execution success', 'execution error'])
+  type: 'execution success' | 'execution error';
 
   @IsString()
-  @IsNotEmpty()
-  testId: string;
+  stdout: string;
 
   @IsString()
-  @IsNotEmpty()
-  userId: string;
+  stderr: string;
 
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => TestResult)
-  results: TestResult[];
+  @IsNumber()
+  exitCode: number;
+
+  @IsNumber()
+  wallTime: number;
 
   @IsBoolean()
-  passed: boolean;
-
-  @IsArray()
-  @IsOptional()
-  @ValidateNested({ each: true })
-  @Type(() => TestResult)
-  customResults?: TestResult[];
+  timedOut: boolean;
 
   @IsString()
-  @IsOptional()
-  error?: string;
+  message: string;
+
+  @IsString()
+  token: string;
+
+  @ValidateNested()
+  @Type(() => TestResult)
+  result: TestResult;
+}
+
+export class FileData {
+  @IsString()
+  id: string;
+  @IsString()
+  filename: string;
+  @IsString()
+  extension: string;
+  @IsString()
+  content: string;
 }

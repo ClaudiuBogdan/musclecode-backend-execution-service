@@ -1,7 +1,8 @@
-import { CodeExecutionResponse, CodeExecutionStrategy } from './interfaces';
+import { CodeExecutionResponse } from '../interfaces';
+import { CodeExecutionStrategy } from './interfaces';
 import { JavaScriptExecutor } from './javascript';
 import { PythonExecutor } from './python';
-import { TypeScriptExecutor } from './typescript';
+import { TypeScriptExecutor } from './typescript/test';
 
 export async function executeCode(
   codePath: string,
