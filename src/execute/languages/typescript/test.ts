@@ -56,6 +56,73 @@ const tsConfig = `{
   "exclude": ["node_modules"]
 }`;
 
+function createTestHierarchy(testResults: any[]): TestItem[] {
+  const hierarchy: { [key: string]: TestItem } = {};
+
+  testResults.forEach((test) => {
+    const ancestorTitles = test.ancestorTitles;
+    const testTitle = test.title;
+    const isPassed = test.status === 'passed';
+
+    // Create or get the root describe block
+    if (ancestorTitles.length > 0) {
+      const rootDescribe = ancestorTitles[0];
+      if (!hierarchy[rootDescribe]) {
+        hierarchy[rootDescribe] = {
+          t: 'describe',
+          v: rootDescribe,
+          p: true,
+          items: [],
+        };
+      }
+
+      let currentLevel = hierarchy[rootDescribe];
+
+      // Handle nested describes (if any)
+      for (let i = 1; i < ancestorTitles.length; i++) {
+        const describeTitle = ancestorTitles[i];
+        let nextLevel = currentLevel.items?.find(
+          (item) => item.t === 'describe' && item.v === describeTitle,
+        );
+
+        if (!nextLevel) {
+          nextLevel = {
+            t: 'describe',
+            v: describeTitle,
+            p: true,
+            items: [],
+          };
+          currentLevel.items = currentLevel.items || [];
+          currentLevel.items.push(nextLevel);
+        }
+        currentLevel = nextLevel;
+      }
+
+      // Add the test to the deepest level
+      currentLevel.items = currentLevel.items || [];
+      currentLevel.items.push({
+        t: isPassed ? 'passed' : 'failed',
+        v: testTitle,
+        p: isPassed,
+      });
+
+      // Update parent describe block's pass status
+      if (!isPassed) {
+        let current = hierarchy[rootDescribe];
+        for (const title of ancestorTitles.slice(1)) {
+          current.p = false;
+          current = current.items?.find(
+            (item) => item.t === 'describe' && item.v === title,
+          )!;
+        }
+        current.p = false;
+      }
+    }
+  });
+
+  return Object.values(hierarchy);
+}
+
 export class TypeScriptExecutor implements CodeExecutionStrategy {
   async execute(codePath: string): Promise<CodeExecutionResponse> {
     try {
@@ -106,18 +173,7 @@ export class TypeScriptExecutor implements CodeExecutionStrategy {
       ).length;
       const errors = 0; // No pending or todo tests in the output
 
-      const testItems: TestItem[] = testResults.assertionResults.map(
-        (test) => ({
-          t: test.status === 'passed' ? 'passed' : 'failed',
-          v: test.title,
-          p: test.status === 'passed',
-          items: test.ancestorTitles.map((title) => ({
-            t: 'describe',
-            v: title,
-            p: true,
-          })),
-        }),
-      );
+      const testItems = createTestHierarchy(testResults.assertionResults);
 
       return {
         type: failed === 0 ? 'execution success' : 'execution error',

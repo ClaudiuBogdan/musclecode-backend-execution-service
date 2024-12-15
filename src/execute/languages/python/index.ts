@@ -3,6 +3,73 @@ import { createFile } from 'src/utils/fs';
 import { exec } from 'src/utils/exec';
 import { CodeExecutionResponse, TestItem } from 'src/execute/interfaces';
 
+function createTestHierarchy(tests: any[]): TestItem[] {
+  const hierarchy: { [key: string]: TestItem } = {};
+
+  tests.forEach((test) => {
+    const nodePath = test.nodeid.split('::');
+    const testTitle = nodePath[nodePath.length - 1];
+    const isPassed = test.outcome === 'passed';
+    const ancestorTitles = nodePath.slice(0, -1);
+
+    if (ancestorTitles.length > 0) {
+      const rootDescribe = ancestorTitles[0];
+      if (!hierarchy[rootDescribe]) {
+        hierarchy[rootDescribe] = {
+          t: 'describe',
+          v: rootDescribe,
+          p: true,
+          items: [],
+        };
+      }
+
+      let currentLevel = hierarchy[rootDescribe];
+
+      // Handle nested describes (if any)
+      for (let i = 1; i < ancestorTitles.length; i++) {
+        const describeTitle = ancestorTitles[i];
+        let nextLevel = currentLevel.items?.find(
+          (item) => item.t === 'describe' && item.v === describeTitle,
+        );
+
+        if (!nextLevel) {
+          nextLevel = {
+            t: 'describe',
+            v: describeTitle,
+            p: true,
+            items: [],
+          };
+          currentLevel.items = currentLevel.items || [];
+          currentLevel.items.push(nextLevel);
+        }
+        currentLevel = nextLevel;
+      }
+
+      // Add the test to the deepest level
+      currentLevel.items = currentLevel.items || [];
+      currentLevel.items.push({
+        t: isPassed ? 'passed' : 'failed',
+        v: testTitle,
+        p: isPassed,
+      });
+
+      // Update parent describe block's pass status
+      if (!isPassed) {
+        let current = hierarchy[rootDescribe];
+        for (const title of ancestorTitles.slice(1)) {
+          current.p = false;
+          current = current.items?.find(
+            (item) => item.t === 'describe' && item.v === title,
+          )!;
+        }
+        current.p = false;
+      }
+    }
+  });
+
+  return Object.values(hierarchy);
+}
+
 export class PythonExecutor implements CodeExecutionStrategy {
   async execute(codePath: string): Promise<CodeExecutionResponse> {
     try {
@@ -57,19 +124,7 @@ export class PythonExecutor implements CodeExecutionStrategy {
       const failed = pytestOutput.summary.failed || 0;
       const errors = pytestOutput.summary.error || 0;
 
-      const testItems: TestItem[] = pytestOutput.tests.map((test) => ({
-        t: test.outcome === 'passed' ? 'passed' : 'failed',
-        v: test.name,
-        p: test.outcome === 'passed',
-        items: test.nodeid
-          .split('::')
-          .slice(0, -1)
-          .map((title) => ({
-            t: 'describe',
-            v: title,
-            p: true,
-          })),
-      }));
+      const testItems = createTestHierarchy(pytestOutput.tests);
 
       return {
         type:
