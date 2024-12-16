@@ -1,276 +1,115 @@
 import { CodeExecutionStrategy, FileWriterStrategy } from '../interfaces';
 import { createFile } from 'src/utils/fs';
 import { exec } from 'src/utils/exec';
-import { CodeExecutionResponse, TestItem } from 'src/execute/interfaces';
-
-function createTestHierarchy(tests: any[]): TestItem[] {
-  const hierarchy: { [key: string]: TestItem } = {};
-  const topLevelTests: TestItem[] = [];
-
-  tests.forEach((test) => {
-    const nodePath = test.nodeid.split('::');
-    const testTitle = nodePath[nodePath.length - 1];
-    const isPassed = test.outcome === 'passed';
-    const ancestorTitles = nodePath.slice(0, -1);
-
-    // Handle top-level tests (no describe blocks)
-    if (ancestorTitles.length === 0) {
-      topLevelTests.push({
-        t: isPassed ? 'passed' : 'failed',
-        v: testTitle,
-        p: isPassed,
-      });
-      return;
-    }
-
-    // Handle tests within describe blocks
-    const rootDescribe = ancestorTitles[0];
-    if (!hierarchy[rootDescribe]) {
-      hierarchy[rootDescribe] = {
-        t: 'describe',
-        v: rootDescribe,
-        p: true,
-        items: [],
-      };
-    }
-
-    let currentLevel = hierarchy[rootDescribe];
-
-    // Handle nested describes (if any)
-    for (let i = 1; i < ancestorTitles.length; i++) {
-      const describeTitle = ancestorTitles[i];
-      let nextLevel = currentLevel.items?.find(
-        (item) => item.t === 'describe' && item.v === describeTitle,
-      );
-
-      if (!nextLevel) {
-        nextLevel = {
-          t: 'describe',
-          v: describeTitle,
-          p: true,
-          items: [],
-        };
-        currentLevel.items = currentLevel.items || [];
-        currentLevel.items.push(nextLevel);
-      }
-      currentLevel = nextLevel;
-    }
-
-    // Add the test to the deepest level
-    currentLevel.items = currentLevel.items || [];
-    currentLevel.items.push({
-      t: isPassed ? 'passed' : 'failed',
-      v: testTitle,
-      p: isPassed,
-    });
-
-    // Update parent describe block's pass status
-    if (!isPassed) {
-      let current = hierarchy[rootDescribe];
-      for (const title of ancestorTitles.slice(1)) {
-        current.p = false;
-        const nextLevel = current.items?.find(
-          (item) => item.t === 'describe' && item.v === title,
-        );
-        if (!nextLevel) break;
-        current = nextLevel;
-      }
-      current.p = false;
-    }
-  });
-
-  // If we have top-level tests, create a default describe block for them
-  if (topLevelTests.length > 0) {
-    const allTopLevelTestsPassed = topLevelTests.every((test) => test.p);
-    hierarchy['Tests'] = {
-      t: 'describe',
-      v: 'Tests',
-      p: allTopLevelTestsPassed,
-      items: topLevelTests,
-    };
-  }
-
-  return Object.values(hierarchy);
-}
+import { CodeExecutionResponse } from 'src/execute/interfaces';
+import {
+  createExecutionResponse,
+  createErrorResponse,
+} from './testExecutionResult';
 
 export class PythonExecutor implements CodeExecutionStrategy {
   async execute(codePath: string): Promise<CodeExecutionResponse> {
     try {
-      // First, check for syntax errors
-      try {
-        await exec(codePath, './venv/bin/python -m py_compile main.py');
-      } catch (syntaxError) {
-        return {
-          type: 'execution error',
-          stdout: '',
-          stderr:
-            syntaxError instanceof Error
-              ? syntaxError.message
-              : String(syntaxError),
-          exitCode: 1,
-          wallTime: 0,
-          timedOut: false,
-          message: 'Syntax error',
-          token: '',
-          result: {
-            serverError: false,
-            completed: false,
-            output: [],
-            successMode: 'assertions',
-            passed: 0,
-            failed: 0,
-            errors: 1,
-            error:
-              syntaxError instanceof Error
-                ? syntaxError.message
-                : String(syntaxError),
-            assertions: {
-              passed: 0,
-              failed: 0,
-              hidden: { passed: 0, failed: 0 },
-            },
-            specs: { passed: 0, failed: 0, hidden: { passed: 0, failed: 0 } },
-            unweighted: { passed: 0, failed: 0 },
-            weighted: { passed: 0, failed: 0 },
-            timedOut: false,
-            wallTime: 0,
-            testTime: 0,
-            tags: null,
-          },
-        };
-      }
-
       // Create a virtual environment if it doesn't exist
       await exec(codePath, 'python3 -m venv venv || true');
 
       // Install pytest and required packages
       await exec(codePath, './venv/bin/pip install pytest pytest-json-report');
 
-      const execOutput = await exec(
-        codePath,
-        `./venv/bin/python -m pytest --json-report --json-report-file=report.json . > /dev/null 2>&1 && cat report.json`,
-      );
-      const pytestOutput = JSON.parse(execOutput);
+      try {
+        // First, run the code directly to capture stdout
+        // TODO: fix this. It not calling the main function and the tests. Another approach needed
+        //         const userOutput = await exec(
+        //           codePath,
+        //           `./venv/bin/python -c "
+        // import sys
+        // sys.path.append('.')
+        // from test_main import *
+        // # The code has been imported and any top-level print statements have been executed
+        // "`,
+        //         );
 
-      if (!pytestOutput.tests || pytestOutput.tests.length === 0) {
-        return {
-          type: 'execution error',
-          stdout: '',
-          stderr: 'No test results found.',
-          exitCode: 1,
-          wallTime: 0,
-          timedOut: false,
-          message: 'No test results found.',
-          token: '',
-          result: {
-            serverError: false,
-            completed: false,
-            output: [],
-            successMode: 'assertions',
-            passed: 0,
-            failed: 1,
-            errors: 1,
-            error: 'No test results found.',
-            assertions: {
-              passed: 0,
-              failed: 1,
-              hidden: { passed: 0, failed: 0 },
-            },
-            specs: { passed: 0, failed: 1, hidden: { passed: 0, failed: 0 } },
-            unweighted: { passed: 0, failed: 1 },
-            weighted: { passed: 0, failed: 1 },
-            timedOut: false,
-            wallTime: 0,
-            testTime: 0,
-            tags: null,
-          },
-        };
+        // Then run pytest to check for syntax errors and collect tests
+        const collectOutput = await exec(
+          codePath,
+          `./venv/bin/python -m pytest --verbose --collect-only .`,
+        );
+
+        // If the output contains a syntax error, return it
+        if (
+          collectOutput.includes('SyntaxError') ||
+          collectOutput.includes('IndentationError')
+        ) {
+          // Extract the error message from the pytest output
+          const errorLines = collectOutput
+            .split('\n')
+            .filter(
+              (line) =>
+                line.includes('Error') ||
+                line.includes('test_main.py') ||
+                line.includes('    ') || // Include indented lines which often contain the error pointer (^)
+                line.trim().startsWith('^'), // Include the error pointer line
+            )
+            .join('\n');
+
+          return createErrorResponse(collectOutput, errorLines, false);
+        }
+
+        // If no tests were collected (but no syntax error), return with test discovery message
+        if (collectOutput.includes('no tests collected')) {
+          return createErrorResponse(
+            collectOutput,
+            'No test files found. Make sure your test files start with "test_" or end with "_test.py" and test functions start with "test_".',
+            false,
+          );
+        }
+
+        // If tests were found and no syntax errors, run them and generate the report
+        await exec(
+          codePath,
+          `./venv/bin/python -m pytest --json-report --json-report-file=report.json .`,
+        );
+
+        const reportContent = await exec(codePath, 'cat report.json');
+        console.log('Report content:', reportContent);
+
+        try {
+          const parsedOutput = JSON.parse(reportContent);
+
+          if (!parsedOutput.tests || parsedOutput.tests.length === 0) {
+            return createErrorResponse(
+              '',
+              'No test results found. Make sure your test files start with "test_" or end with "_test.py" and test functions start with "test_".',
+              false,
+            );
+          }
+
+          // TODO: add output here
+          return createExecutionResponse('', parsedOutput);
+        } catch (parseError) {
+          console.error('Failed to parse pytest output:', parseError);
+          console.error('Raw report content:', reportContent);
+          return createErrorResponse(
+            '',
+            'Failed to parse test results: ' + String(parseError),
+            true,
+          );
+        }
+      } catch (err) {
+        console.error('Error executing tests:', err);
+        return createErrorResponse(
+          '',
+          err instanceof Error ? err.stack || err.message : String(err),
+          true,
+        );
       }
-
-      const passed = pytestOutput.summary.passed || 0;
-      const failed = pytestOutput.summary.failed || 0;
-      const errors = pytestOutput.summary.error || 0;
-      const totalTests = passed + failed + errors;
-      const allTestsPassed = passed > 0 && failed === 0 && errors === 0;
-
-      const testItems = createTestHierarchy(pytestOutput.tests);
-
-      return {
-        type: allTestsPassed ? 'execution success' : 'execution error',
-        stdout: pytestOutput.stdout || '',
-        stderr: pytestOutput.stderr || '',
-        exitCode: allTestsPassed ? 0 : 1,
-        wallTime: pytestOutput.duration * 1000,
-        timedOut: false,
-        message: allTestsPassed ? 'All tests passed' : 'Some tests failed',
-        token: '',
-        result: {
-          serverError: false,
-          completed: allTestsPassed && totalTests > 0,
-          output: testItems,
-          successMode: 'assertions',
-          passed,
-          failed,
-          errors,
-          error: null,
-          assertions: {
-            passed,
-            failed,
-            hidden: { passed: 0, failed: 0 },
-          },
-          specs: {
-            passed,
-            failed,
-            hidden: { passed: 0, failed: 0 },
-          },
-          unweighted: {
-            passed,
-            failed,
-          },
-          weighted: {
-            passed,
-            failed,
-          },
-          timedOut: false,
-          wallTime: pytestOutput.duration * 1000,
-          testTime: pytestOutput.duration * 1000,
-          tags: null,
-        },
-      };
     } catch (err) {
       console.error('Error executing tests:', err);
-      return {
-        type: 'execution error',
-        stdout: '',
-        stderr: err instanceof Error ? err.stack || err.message : String(err),
-        exitCode: 1,
-        wallTime: 0,
-        timedOut: false,
-        message: err instanceof Error ? err.message : String(err),
-        token: '',
-        result: {
-          serverError: true,
-          completed: false,
-          output: [],
-          successMode: 'assertions',
-          passed: 0,
-          failed: 1,
-          errors: 1,
-          error: err instanceof Error ? err.message : String(err),
-          assertions: {
-            passed: 0,
-            failed: 1,
-            hidden: { passed: 0, failed: 0 },
-          },
-          specs: { passed: 0, failed: 1, hidden: { passed: 0, failed: 0 } },
-          unweighted: { passed: 0, failed: 1 },
-          weighted: { passed: 0, failed: 1 },
-          timedOut: false,
-          wallTime: 0,
-          testTime: 0,
-          tags: null,
-        },
-      };
+      return createErrorResponse(
+        '',
+        err instanceof Error ? err.stack || err.message : String(err),
+        true,
+      );
     }
   }
 }
@@ -281,7 +120,7 @@ export class PythonFileWriter implements FileWriterStrategy {
     await createFile(
       {
         id: 'main',
-        filename: 'main',
+        filename: 'test_main',
         extension: 'py',
         content: code,
       },
@@ -298,7 +137,7 @@ export class PythonFileWriter implements FileWriterStrategy {
 python_files = test_*.py *_test.py
 python_functions = test_*
 python_classes = Test*
-addopts = -v --json-report
+addopts = --json-report
 `,
       },
       filePath,

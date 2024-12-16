@@ -192,7 +192,7 @@ export const createExecutionResponse = (
   ]
     .join('\n')
     .trim();
-  
+
   const stderr = [
     jestOutput.stderr || '',
     ...consoleOutput

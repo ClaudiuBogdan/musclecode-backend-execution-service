@@ -17,6 +17,7 @@ const jestConfig = `module.exports = {
 const jestSetup = `
 // Jest setup file
 jest.setTimeout(10000); // 10 second timeout
+// TODO: add a timeout. This one is not working
 
 // Add any custom matchers or global setup here
 expect.extend({

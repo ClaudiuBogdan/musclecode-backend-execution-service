@@ -15,6 +15,7 @@ export async function exec(
     ...optionsArg,
   };
   return new Promise((resolve, reject) => {
+    // TODO: add a timeout
     execCmd(
       `cd ${codePath} && ${config.isDev ? '' : 'firejail --config=/app/firejail.profile'} ${command}`,
       (error, stdout, stderr) => {
