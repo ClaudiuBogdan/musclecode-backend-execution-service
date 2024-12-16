@@ -18,7 +18,6 @@ export async function exec(
     execCmd(
       `cd ${codePath} && ${config.isDev ? '' : 'firejail --config=/app/firejail.profile'} ${command}`,
       (error, stdout, stderr) => {
-        console.log({ codePath, command, error, stdout, stderr });
         if (options.shouldThrowError && error) {
           reject(error);
         }

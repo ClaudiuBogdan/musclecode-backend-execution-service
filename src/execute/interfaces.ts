@@ -47,6 +47,10 @@ export class TestItem {
   p: boolean;
 
   @IsOptional()
+  @IsString()
+  error?: string;
+
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => TestItem)

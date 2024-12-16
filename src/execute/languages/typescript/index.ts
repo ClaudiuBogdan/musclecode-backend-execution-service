@@ -1,17 +1,18 @@
 import { CodeExecutionStrategy, FileWriterStrategy } from '../interfaces';
 import { createFile } from 'src/utils/fs';
 import { exec } from 'src/utils/exec';
-import { createExecutionResponse } from '../typescript/testExecutionResult';
+import { createExecutionResponse } from './testExecutionResult';
 
 const jestConfig = `module.exports = {
   testEnvironment: 'node',
-  transform: {},
-  testMatch: ['**/*.test.js', '**/*_test.js', '**/test_*.js'],
+  transform: {
+    '^.+\\.tsx?$': 'ts-jest',
+  },
+  testMatch: ['**/*.test.ts', '**/*_test.ts', '**/test_*.ts'],
   verbose: true,
-  moduleFileExtensions: ['js', 'json'],
+  moduleFileExtensions: ['ts', 'js', 'json'],
   setupFilesAfterEnv: ['./jest.setup.js'],
-  // TODO: add console output to response
-  //reporters: ['default', 'jest-console-reporter']
+  reporters: ['default', 'jest-console-reporter']
 };`;
 
 const jestSetup = `
@@ -39,17 +40,18 @@ expect.extend({
 });
 `;
 
-export class JavaScriptExecutor implements CodeExecutionStrategy {
+export class TypeScriptExecutor implements CodeExecutionStrategy {
   async execute(codePath: string) {
     try {
+      // TODO: add console output to response
       // // First, install the jest-console-reporter
       // await exec(codePath, 'npm install --save-dev jest-console-reporter');
 
-      // // Run tests with both JSON output and console reporter
+      // // Run tests and get JSON output
       // const jestResult = await exec(codePath, 'jest --json --useStderr');
       // const jestOutput = JSON.parse(jestResult);
 
-      // // Get the console output from stderr (where Jest writes it with --useStderr)
+      // // Get console output using the console reporter
       // const consoleOutput = await exec(
       //   codePath,
       //   'jest --reporters=jest-console-reporter',
@@ -117,14 +119,14 @@ export class JavaScriptExecutor implements CodeExecutionStrategy {
   }
 }
 
-export class JavaScriptFileWriter implements FileWriterStrategy {
+export class TypeScriptFileWriter implements FileWriterStrategy {
   async write(filePath: string, code: string): Promise<void> {
     // Write the main code file
     await createFile(
       {
         id: 'main',
         filename: 'index.test',
-        extension: 'js',
+        extension: 'ts',
         content: code,
       },
       filePath,
@@ -165,6 +167,30 @@ export class JavaScriptFileWriter implements FileWriterStrategy {
             private: true,
             scripts: {
               test: 'jest',
+            },
+          },
+          null,
+          2,
+        ),
+      },
+      filePath,
+    );
+
+    // Write tsconfig.json
+    await createFile(
+      {
+        id: 'tsconfig',
+        filename: 'tsconfig',
+        extension: 'json',
+        content: JSON.stringify(
+          {
+            compilerOptions: {
+              target: 'es2020',
+              module: 'commonjs',
+              strict: true,
+              esModuleInterop: true,
+              skipLibCheck: true,
+              forceConsistentCasingInFileNames: true,
             },
           },
           null,

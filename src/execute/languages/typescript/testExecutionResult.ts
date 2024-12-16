@@ -5,6 +5,7 @@ interface JestAssertionResult {
   title: string;
   status: 'passed' | 'failed' | 'pending' | 'todo' | 'disabled';
   duration?: number;
+  failureMessages?: string[];
 }
 
 interface JestTestResult {
@@ -12,11 +13,23 @@ interface JestTestResult {
   startTime: number;
   endTime: number;
   message?: string;
+  status?: string;
+  name?: string;
+  console?: { message: string; type: string }[];
 }
 
 interface JestOutput {
   testResults: JestTestResult[];
   numRuntimeErrorTestSuites?: number;
+  numFailedTestSuites?: number;
+  numFailedTests?: number;
+  numPassedTestSuites?: number;
+  numPassedTests?: number;
+  numPendingTestSuites?: number;
+  numPendingTests?: number;
+  numTotalTestSuites?: number;
+  numTotalTests?: number;
+  success?: boolean;
   stdout?: string;
   stderr?: string;
 }
@@ -28,7 +41,7 @@ export const createTestHierarchy = (
   const topLevelTests: TestItem[] = [];
 
   testResults.forEach((test) => {
-    const { ancestorTitles, title, status } = test;
+    const { ancestorTitles, title, status, failureMessages } = test;
     const isPassed = status === 'passed';
 
     if (ancestorTitles.length === 0) {
@@ -36,6 +49,8 @@ export const createTestHierarchy = (
         t: isPassed ? 'passed' : 'failed',
         v: title,
         p: isPassed,
+        error:
+          !isPassed && failureMessages?.length ? failureMessages[0] : undefined,
       });
       return;
     }
@@ -72,12 +87,14 @@ export const createTestHierarchy = (
       currentLevel = nextLevel;
     }
 
-    // Add test to deepest level
+    // Add test to deepest level with error message if failed
     currentLevel.items = currentLevel.items || [];
     currentLevel.items.push({
       t: isPassed ? 'passed' : 'failed',
       v: title,
       p: isPassed,
+      error:
+        !isPassed && failureMessages?.length ? failureMessages[0] : undefined,
     });
 
     // Update parent describe block's pass status
@@ -165,15 +182,41 @@ export const createExecutionResponse = (
     ['pending', 'todo', 'disabled'].includes(t.status),
   ).length;
 
+  // Collect console output from test results
+  const consoleOutput = testResults.console || [];
+  const stdout = [
+    jestOutput.stdout || '',
+    ...consoleOutput
+      .filter((log) => log.type === 'log')
+      .map((log) => log.message),
+  ]
+    .join('\n')
+    .trim();
+  
+  const stderr = [
+    jestOutput.stderr || '',
+    ...consoleOutput
+      .filter((log) => log.type === 'error')
+      .map((log) => log.message),
+  ]
+    .join('\n')
+    .trim();
+
   const testItems = createTestHierarchy(testResults.assertionResults);
   const totalTests = passed + failed + errors;
   const allTestsPassed = passed > 0 && failed === 0 && errors === 0;
   const wallTime = testResults.endTime - testResults.startTime;
 
+  // Collect all error messages
+  const errorMessages = testResults.assertionResults
+    .filter((t) => t.status === 'failed' && t.failureMessages?.length)
+    .map((t) => t.failureMessages![0])
+    .join('\n');
+
   return {
     type: allTestsPassed ? 'execution success' : 'execution error',
-    stdout: jestOutput.stdout || '',
-    stderr: jestOutput.stderr || '',
+    stdout,
+    stderr: stderr || errorMessages, // Include error messages in stderr if no other stderr content
     exitCode: allTestsPassed ? 0 : 1,
     wallTime,
     timedOut: false,
@@ -187,7 +230,7 @@ export const createExecutionResponse = (
       passed,
       failed,
       errors,
-      error: null,
+      error: errorMessages || null,
       assertions: {
         passed,
         failed,
