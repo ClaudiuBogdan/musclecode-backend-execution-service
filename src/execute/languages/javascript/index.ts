@@ -39,67 +39,89 @@ expect.extend({
 
 function createTestHierarchy(testResults: any[]): TestItem[] {
   const hierarchy: { [key: string]: TestItem } = {};
+  const topLevelTests: TestItem[] = [];
 
   testResults.forEach((test) => {
     const ancestorTitles = test.ancestorTitles;
     const testTitle = test.title;
     const isPassed = test.status === 'passed';
 
-    // Create or get the root describe block
-    if (ancestorTitles.length > 0) {
-      const rootDescribe = ancestorTitles[0];
-      if (!hierarchy[rootDescribe]) {
-        hierarchy[rootDescribe] = {
-          t: 'describe',
-          v: rootDescribe,
-          p: true,
-          items: [],
-        };
-      }
-
-      let currentLevel = hierarchy[rootDescribe];
-
-      // Handle nested describes (if any)
-      for (let i = 1; i < ancestorTitles.length; i++) {
-        const describeTitle = ancestorTitles[i];
-        let nextLevel = currentLevel.items?.find(
-          (item) => item.t === 'describe' && item.v === describeTitle,
-        );
-
-        if (!nextLevel) {
-          nextLevel = {
-            t: 'describe',
-            v: describeTitle,
-            p: true,
-            items: [],
-          };
-          currentLevel.items = currentLevel.items || [];
-          currentLevel.items.push(nextLevel);
-        }
-        currentLevel = nextLevel;
-      }
-
-      // Add the test to the deepest level
-      currentLevel.items = currentLevel.items || [];
-      currentLevel.items.push({
+    // Handle top-level tests (no describe blocks)
+    if (ancestorTitles.length === 0) {
+      topLevelTests.push({
         t: isPassed ? 'passed' : 'failed',
         v: testTitle,
         p: isPassed,
       });
+      return;
+    }
 
-      // Update parent describe block's pass status
-      if (!isPassed) {
-        let current = hierarchy[rootDescribe];
-        for (const title of ancestorTitles.slice(1)) {
-          current.p = false;
-          current = current.items?.find(
-            (item) => item.t === 'describe' && item.v === title,
-          )!;
-        }
-        current.p = false;
+    // Handle tests within describe blocks
+    const rootDescribe = ancestorTitles[0];
+    if (!hierarchy[rootDescribe]) {
+      hierarchy[rootDescribe] = {
+        t: 'describe',
+        v: rootDescribe,
+        p: true,
+        items: [],
+      };
+    }
+
+    let currentLevel = hierarchy[rootDescribe];
+
+    // Handle nested describes (if any)
+    for (let i = 1; i < ancestorTitles.length; i++) {
+      const describeTitle = ancestorTitles[i];
+      let nextLevel = currentLevel.items?.find(
+        (item) => item.t === 'describe' && item.v === describeTitle,
+      );
+
+      if (!nextLevel) {
+        nextLevel = {
+          t: 'describe',
+          v: describeTitle,
+          p: true,
+          items: [],
+        };
+        currentLevel.items = currentLevel.items || [];
+        currentLevel.items.push(nextLevel);
       }
+      currentLevel = nextLevel;
+    }
+
+    // Add the test to the deepest level
+    currentLevel.items = currentLevel.items || [];
+    currentLevel.items.push({
+      t: isPassed ? 'passed' : 'failed',
+      v: testTitle,
+      p: isPassed,
+    });
+
+    // Update parent describe block's pass status
+    if (!isPassed) {
+      let current = hierarchy[rootDescribe];
+      for (const title of ancestorTitles.slice(1)) {
+        current.p = false;
+        const nextLevel = current.items?.find(
+          (item) => item.t === 'describe' && item.v === title,
+        );
+        if (!nextLevel) break;
+        current = nextLevel;
+      }
+      current.p = false;
     }
   });
+
+  // If we have top-level tests, create a default describe block for them
+  if (topLevelTests.length > 0) {
+    const allTopLevelTestsPassed = topLevelTests.every((test) => test.p);
+    hierarchy['Tests'] = {
+      t: 'describe',
+      v: 'Tests',
+      p: allTopLevelTestsPassed,
+      items: topLevelTests,
+    };
+  }
 
   return Object.values(hierarchy);
 }
@@ -107,6 +129,51 @@ function createTestHierarchy(testResults: any[]): TestItem[] {
 export class JavaScriptExecutor implements CodeExecutionStrategy {
   async execute(codePath: string): Promise<CodeExecutionResponse> {
     try {
+      // First, check for syntax errors using Node.js
+      try {
+        await exec(codePath, 'node --check index.test.js');
+      } catch (syntaxError) {
+        return {
+          type: 'execution error',
+          stdout: '',
+          stderr:
+            syntaxError instanceof Error
+              ? syntaxError.message
+              : String(syntaxError),
+          exitCode: 1,
+          wallTime: 0,
+          timedOut: false,
+          message: 'Syntax error',
+          token: '',
+          result: {
+            serverError: false,
+            completed: false,
+            output: [],
+            successMode: 'assertions',
+            passed: 0,
+            failed: 0,
+            errors: 1,
+            error:
+              syntaxError instanceof Error
+                ? syntaxError.message
+                : String(syntaxError),
+            assertions: {
+              passed: 0,
+              failed: 0,
+              hidden: { passed: 0, failed: 0 },
+            },
+            specs: { passed: 0, failed: 0, hidden: { passed: 0, failed: 0 } },
+            unweighted: { passed: 0, failed: 0 },
+            weighted: { passed: 0, failed: 0 },
+            timedOut: false,
+            wallTime: 0,
+            testTime: 0,
+            tags: null,
+          },
+        };
+      }
+
+      // If syntax check passes, run tests
       const jestResult = await exec(codePath, 'npx jest --json');
       const jestOutput = JSON.parse(jestResult);
 
@@ -114,21 +181,21 @@ export class JavaScriptExecutor implements CodeExecutionStrategy {
         return {
           type: 'execution error',
           stdout: '',
-          stderr: 'No test results found or compilation failed.',
+          stderr: 'No test results found.',
           exitCode: 1,
           wallTime: 0,
           timedOut: false,
-          message: 'No test results found or compilation failed.',
+          message: 'No test results found.',
           token: '',
           result: {
-            serverError: true,
+            serverError: false,
             completed: false,
             output: [],
             successMode: 'assertions',
             passed: 0,
             failed: 1,
             errors: 1,
-            error: 'No test results found or compilation failed.',
+            error: 'No test results found.',
             assertions: {
               passed: 0,
               failed: 1,
@@ -149,21 +216,23 @@ export class JavaScriptExecutor implements CodeExecutionStrategy {
       const passed = testResults.numPassingTests;
       const failed = testResults.numFailingTests;
       const errors = testResults.numPendingTests + testResults.numTodoTests;
+      const totalTests = passed + failed + errors;
+      const allTestsPassed = passed > 0 && failed === 0 && errors === 0;
 
       const testItems = createTestHierarchy(testResults.testResults);
 
       return {
-        type: failed === 0 ? 'execution success' : 'execution error',
+        type: allTestsPassed ? 'execution success' : 'execution error',
         stdout: jestOutput.stdout || '',
         stderr: jestOutput.stderr || '',
-        exitCode: failed === 0 ? 0 : 1,
-        wallTime: testResults.perfStats?.runtime || 0,
+        exitCode: allTestsPassed ? 0 : 1,
+        wallTime: testResults.endTime - testResults.startTime,
         timedOut: false,
-        message: failed === 0 ? 'All tests passed' : 'Some tests failed',
+        message: allTestsPassed ? 'All tests passed' : 'Some tests failed',
         token: '',
         result: {
           serverError: false,
-          completed: true,
+          completed: allTestsPassed && totalTests > 0,
           output: testItems,
           successMode: 'assertions',
           passed,
@@ -189,13 +258,13 @@ export class JavaScriptExecutor implements CodeExecutionStrategy {
             failed,
           },
           timedOut: false,
-          wallTime: testResults.perfStats?.runtime || 0,
-          testTime: testResults.perfStats?.slowest || 0,
+          wallTime: testResults.endTime - testResults.startTime,
+          testTime: testResults.assertionResults[0]?.duration || 0,
           tags: null,
         },
       };
     } catch (err) {
-      console.error('Error executing jest:', err);
+      console.error('Error executing tests:', err);
       return {
         type: 'execution error',
         stdout: '',

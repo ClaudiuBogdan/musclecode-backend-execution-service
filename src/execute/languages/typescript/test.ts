@@ -1,7 +1,7 @@
 import { exec } from 'src/utils/exec';
 import { CodeExecutionStrategy, FileWriterStrategy } from '../interfaces';
 import { createFile } from 'src/utils/fs';
-import { CodeExecutionResponse, TestItem } from 'src/execute/interfaces';
+import { createExecutionResponse } from './testExecutionResult';
 
 const jestConfig = `module.exports = {
   preset: 'ts-jest',
@@ -56,201 +56,25 @@ const tsConfig = `{
   "exclude": ["node_modules"]
 }`;
 
-function createTestHierarchy(testResults: any[]): TestItem[] {
-  const hierarchy: { [key: string]: TestItem } = {};
-
-  testResults.forEach((test) => {
-    const ancestorTitles = test.ancestorTitles;
-    const testTitle = test.title;
-    const isPassed = test.status === 'passed';
-
-    // Create or get the root describe block
-    if (ancestorTitles.length > 0) {
-      const rootDescribe = ancestorTitles[0];
-      if (!hierarchy[rootDescribe]) {
-        hierarchy[rootDescribe] = {
-          t: 'describe',
-          v: rootDescribe,
-          p: true,
-          items: [],
-        };
-      }
-
-      let currentLevel = hierarchy[rootDescribe];
-
-      // Handle nested describes (if any)
-      for (let i = 1; i < ancestorTitles.length; i++) {
-        const describeTitle = ancestorTitles[i];
-        let nextLevel = currentLevel.items?.find(
-          (item) => item.t === 'describe' && item.v === describeTitle,
-        );
-
-        if (!nextLevel) {
-          nextLevel = {
-            t: 'describe',
-            v: describeTitle,
-            p: true,
-            items: [],
-          };
-          currentLevel.items = currentLevel.items || [];
-          currentLevel.items.push(nextLevel);
-        }
-        currentLevel = nextLevel;
-      }
-
-      // Add the test to the deepest level
-      currentLevel.items = currentLevel.items || [];
-      currentLevel.items.push({
-        t: isPassed ? 'passed' : 'failed',
-        v: testTitle,
-        p: isPassed,
-      });
-
-      // Update parent describe block's pass status
-      if (!isPassed) {
-        let current = hierarchy[rootDescribe];
-        for (const title of ancestorTitles.slice(1)) {
-          current.p = false;
-          current = current.items?.find(
-            (item) => item.t === 'describe' && item.v === title,
-          )!;
-        }
-        current.p = false;
-      }
-    }
-  });
-
-  return Object.values(hierarchy);
-}
-
 export class TypeScriptExecutor implements CodeExecutionStrategy {
-  async execute(codePath: string): Promise<CodeExecutionResponse> {
+  async execute(codePath: string) {
     try {
       const jestResult = await exec(codePath, 'npx jest --json');
       const jestOutput = JSON.parse(jestResult);
-
-      if (!jestOutput.testResults || jestOutput.testResults.length === 0) {
-        return {
-          type: 'execution error',
-          stdout: '',
-          stderr: 'No test results found or compilation failed.',
-          exitCode: 1,
-          wallTime: 0,
-          timedOut: false,
-          message: 'No test results found or compilation failed.',
-          token: '',
-          result: {
-            serverError: true,
-            completed: false,
-            output: [],
-            successMode: 'assertions',
-            passed: 0,
-            failed: 1,
-            errors: 1,
-            error: 'No test results found or compilation failed.',
-            assertions: {
-              passed: 0,
-              failed: 1,
-              hidden: { passed: 0, failed: 0 },
-            },
-            specs: { passed: 0, failed: 1, hidden: { passed: 0, failed: 0 } },
-            unweighted: { passed: 0, failed: 1 },
-            weighted: { passed: 0, failed: 1 },
-            timedOut: false,
-            wallTime: 0,
-            testTime: 0,
-            tags: null,
-          },
-        };
-      }
-
-      const testResults = jestOutput.testResults[0];
-      const passed = testResults.assertionResults.filter(
-        (t) => t.status === 'passed',
-      ).length;
-      const failed = testResults.assertionResults.filter(
-        (t) => t.status === 'failed',
-      ).length;
-      const errors = 0; // No pending or todo tests in the output
-
-      const testItems = createTestHierarchy(testResults.assertionResults);
-
-      return {
-        type: failed === 0 ? 'execution success' : 'execution error',
-        stdout: jestOutput.stdout || '',
-        stderr: jestOutput.stderr || '',
-        exitCode: failed === 0 ? 0 : 1,
-        wallTime: testResults.endTime - testResults.startTime,
-        timedOut: false,
-        message: failed === 0 ? 'All tests passed' : 'Some tests failed',
-        token: '',
-        result: {
-          serverError: false,
-          completed: true,
-          output: testItems,
-          successMode: 'assertions',
-          passed,
-          failed,
-          errors,
-          error: null,
-          assertions: {
-            passed,
-            failed,
-            hidden: { passed: 0, failed: 0 },
-          },
-          specs: {
-            passed,
-            failed,
-            hidden: { passed: 0, failed: 0 },
-          },
-          unweighted: {
-            passed,
-            failed,
-          },
-          weighted: {
-            passed,
-            failed,
-          },
-          timedOut: false,
-          wallTime: testResults.endTime - testResults.startTime,
-          testTime: testResults.assertionResults[0]?.duration || 0,
-          tags: null,
-        },
-      };
+      return createExecutionResponse(jestOutput);
     } catch (err) {
-      console.error('Error executing jest:', err);
-      return {
-        type: 'execution error',
-        stdout: '',
-        stderr: err instanceof Error ? err.stack || err.message : String(err),
-        exitCode: 1,
-        wallTime: 0,
-        timedOut: false,
-        message: err instanceof Error ? err.message : String(err),
-        token: '',
-        result: {
-          serverError: true,
-          completed: false,
-          output: [],
-          successMode: 'assertions',
-          passed: 0,
-          failed: 1,
-          errors: 1,
-          error: err instanceof Error ? err.message : String(err),
-          assertions: {
-            passed: 0,
-            failed: 1,
-            hidden: { passed: 0, failed: 0 },
+      return createExecutionResponse({
+        testResults: [
+          {
+            message:
+              err instanceof Error ? err.stack || err.message : String(err),
+            assertionResults: [],
+            startTime: 0,
+            endTime: 0,
           },
-          specs: { passed: 0, failed: 1, hidden: { passed: 0, failed: 0 } },
-          unweighted: { passed: 0, failed: 1 },
-          weighted: { passed: 0, failed: 1 },
-          timedOut: false,
-          wallTime: 0,
-          testTime: 0,
-          tags: null,
-        },
-      };
+        ],
+        numRuntimeErrorTestSuites: 1,
+      });
     }
   }
 }
