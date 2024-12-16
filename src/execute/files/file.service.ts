@@ -5,6 +5,7 @@ import { FileWriterStrategy } from '../languages/interfaces';
 import { PythonFileWriter } from '../languages/python';
 import { JavaScriptFileWriter } from '../languages/javascript';
 import { TypeScriptFileWriter } from '../languages/typescript/test';
+import { GoFileWriter } from '../languages/go';
 
 @Injectable()
 export class FileService {
@@ -21,6 +22,7 @@ export class FileService {
       python: new PythonFileWriter(),
       javascript: new JavaScriptFileWriter(),
       typescript: new TypeScriptFileWriter(),
+      go: new GoFileWriter(),
     };
 
     const strategy: FileWriterStrategy | undefined =
@@ -48,9 +50,9 @@ export class FileService {
 
   private async ensureDirectoryExists(userCodePath: string): Promise<void> {
     try {
-      await fs.access(userCodePath);
-    } catch (error) {
       await fs.mkdir(userCodePath, { recursive: true });
+    } catch (error) {
+      console.error('Error creating directory:', error);
     }
   }
 }

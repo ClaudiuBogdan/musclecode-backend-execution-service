@@ -14,6 +14,7 @@ export enum CodeLanguage {
   PYTHON = 'python',
   JAVASCRIPT = 'javascript',
   TYPESCRIPT = 'typescript',
+  GO = 'go',
 }
 
 export class ExecuteCodeDTO {

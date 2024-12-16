@@ -3,6 +3,7 @@ import { CodeExecutionStrategy } from './interfaces';
 import { JavaScriptExecutor } from './javascript';
 import { PythonExecutor } from './python';
 import { TypeScriptExecutor } from './typescript/test';
+import { GoExecutor } from './go';
 
 export async function executeCode(
   codePath: string,
@@ -20,6 +21,9 @@ export async function executeCode(
       break;
     case 'typescript':
       strategy = new TypeScriptExecutor();
+      break;
+    case 'go':
+      strategy = new GoExecutor();
       break;
     default:
       throw new Error('Unsupported programming language');
