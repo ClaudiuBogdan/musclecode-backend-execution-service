@@ -60,6 +60,7 @@ export class ExecuteService {
       };
     } finally {
       // Clean up files after execution
+      // TODO: Uncomment this when we have a way to remove the files
       await this.fileService.removeDirectory(filesPath);
     }
   }

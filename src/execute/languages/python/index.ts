@@ -1,7 +1,7 @@
 import { CodeExecutionStrategy, FileWriterStrategy } from '../interfaces';
 import { createFile } from 'src/utils/fs';
 import { exec } from 'src/utils/exec';
-import { CodeExecutionResponse } from 'src/execute/interfaces';
+import { AlgorithmFile, CodeExecutionResponse } from 'src/execute/interfaces';
 import {
   createExecutionResponse,
   createErrorResponse,
@@ -18,16 +18,15 @@ export class PythonExecutor implements CodeExecutionStrategy {
 
       try {
         // First, run the code directly to capture stdout
-        // TODO: fix this. It not calling the main function and the tests. Another approach needed
-        //         const userOutput = await exec(
-        //           codePath,
-        //           `./venv/bin/python -c "
-        // import sys
-        // sys.path.append('.')
-        // from test_main import *
-        // # The code has been imported and any top-level print statements have been executed
-        // "`,
-        //         );
+        const userOutput = await exec(
+          codePath,
+          `./venv/bin/python -c "
+import sys
+sys.path.append('.')
+from test_main import *
+# The code has been imported and any top-level print statements have been executed
+"`,
+        );
 
         // Then run pytest to check for syntax errors and collect tests
         const collectOutput = await exec(
@@ -84,8 +83,7 @@ export class PythonExecutor implements CodeExecutionStrategy {
             );
           }
 
-          // TODO: add output here
-          return createExecutionResponse('', parsedOutput);
+          return createExecutionResponse(userOutput, parsedOutput);
         } catch (parseError) {
           console.error('Failed to parse pytest output:', parseError);
           console.error('Raw report content:', reportContent);
@@ -115,26 +113,20 @@ export class PythonExecutor implements CodeExecutionStrategy {
 }
 
 export class PythonFileWriter implements FileWriterStrategy {
-  async write(filePath: string, code: string): Promise<void> {
-    // Write the main code file
-    await createFile(
-      {
-        id: 'main',
-        filename: 'test_main',
-        extension: 'py',
-        content: code,
-      },
-      filePath,
-    );
+  async write(filePath: string, files: AlgorithmFile[]): Promise<void> {
+    // Write user files
+    for (const file of files) {
+      await createFile(file, filePath);
+    }
 
     // Write pytest config
     await createFile(
       {
         id: 'pytest-config',
-        filename: 'pytest',
+        name: 'pytest',
         extension: 'ini',
         content: `[pytest]
-python_files = test_*.py *_test.py
+python_files = test_*.py *_test.py *test.py test.py
 python_functions = test_*
 python_classes = Test*
 addopts = --json-report
@@ -147,7 +139,7 @@ addopts = --json-report
     await createFile(
       {
         id: 'conftest',
-        filename: 'conftest',
+        name: 'conftest',
         extension: 'py',
         content: `import pytest
 import sys

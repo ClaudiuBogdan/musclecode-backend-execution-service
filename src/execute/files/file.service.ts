@@ -4,7 +4,7 @@ import { ExecuteCodeDTO } from '../interfaces';
 import { FileWriterStrategy } from '../languages/interfaces';
 import { PythonFileWriter } from '../languages/python';
 import { JavaScriptFileWriter } from '../languages/javascript';
-import { TypeScriptFileWriter } from '../languages/typescript/test';
+import { TypeScriptFileWriter } from '../languages/typescript';
 import { GoFileWriter } from '../languages/go';
 
 @Injectable()
@@ -33,8 +33,8 @@ export class FileService {
     }
 
     // Handle code writing based on the payload
-    if (payload.code) {
-      await strategy.write(userCodePath, payload.code);
+    if (payload.files) {
+      await strategy.write(userCodePath, payload.files);
     } else {
       throw new Error('No code or files provided');
     }

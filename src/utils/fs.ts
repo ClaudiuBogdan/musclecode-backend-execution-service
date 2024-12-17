@@ -7,7 +7,7 @@ export async function createFile(
   basePath: string,
 ): Promise<void> {
   // Remove any path traversal components
-  const sanitizedFilename = path.basename(`${file.filename}.${file.extension}`);
+  const sanitizedFilename = path.basename(`${file.name}.${file.extension}`);
   const filePath = path.join(basePath, sanitizedFilename);
 
   await fs.writeFile(filePath, file.content);

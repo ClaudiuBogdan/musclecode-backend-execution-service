@@ -2,7 +2,7 @@ import { CodeExecutionResponse } from '../interfaces';
 import { CodeExecutionStrategy } from './interfaces';
 import { JavaScriptExecutor } from './javascript';
 import { PythonExecutor } from './python';
-import { TypeScriptExecutor } from './typescript/test';
+import { TypeScriptExecutor } from './typescript';
 import { GoExecutor } from './go';
 
 export async function executeCode(

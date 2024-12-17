@@ -2,40 +2,33 @@ import { CodeExecutionStrategy, FileWriterStrategy } from '../interfaces';
 import { createFile } from 'src/utils/fs';
 import { exec } from 'src/utils/exec';
 import { createExecutionResponse } from '../typescript/testExecutionResult';
+import { AlgorithmFile } from 'src/execute/interfaces';
 
-const jestConfig = `module.exports = {
-  testEnvironment: 'node',
-  transform: {},
-  testMatch: ['**/*.test.js', '**/*_test.js', '**/test_*.js'],
-  verbose: true,
-  moduleFileExtensions: ['js', 'json'],
-  setupFilesAfterEnv: ['./jest.setup.js'],
-  // TODO: add console output to response
-  //reporters: ['default', 'jest-console-reporter']
-};`;
+const vitestConfig = `
+const { defineConfig } = require('vitest/config');
 
-const jestSetup = `
-// Jest setup file
-jest.setTimeout(10000); // 10 second timeout
-// TODO: add a timeout. This one is not working
-
-// Add any custom matchers or global setup here
-expect.extend({
-  toBeWithinRange(received, floor, ceiling) {
-    const pass = received >= floor && received <= ceiling;
-    if (pass) {
-      return {
-        message: () =>
-          \`expected \${received} not to be within range \${floor} - \${ceiling}\`,
-        pass: true,
-      };
-    } else {
-      return {
-        message: () =>
-          \`expected \${received} to be within range \${floor} - \${ceiling}\`,
-        pass: false,
-      };
-    }
+module.exports = defineConfig({
+  test: {
+    environment: 'node',
+    include: ['**/test.js'],
+    globals: true,
+    setupFiles: [],
+    maxThreads: 1,
+    minThreads: 1,
+    maxConcurrency: 1,
+    fileParallelism: false,
+    poolOptions: {
+      threads: {
+        singleThread: true,
+      },
+    },
+    coverage: {
+      enabled: false,
+    },
+    cache: false,
+    failFast: true,
+    silent: false,
+    reporters: ['json'],
   },
 });
 `;
@@ -43,25 +36,17 @@ expect.extend({
 export class JavaScriptExecutor implements CodeExecutionStrategy {
   async execute(codePath: string) {
     try {
-      // // First, install the jest-console-reporter
-      // await exec(codePath, 'npm install --save-dev jest-console-reporter');
-
-      // // Run tests with both JSON output and console reporter
-      // const jestResult = await exec(codePath, 'jest --json --useStderr');
-      // const jestOutput = JSON.parse(jestResult);
-
-      // // Get the console output from stderr (where Jest writes it with --useStderr)
-      // const consoleOutput = await exec(
-      //   codePath,
-      //   'jest --reporters=jest-console-reporter',
-      // );
-
-      const jestResult = await exec(codePath, 'jest --json --useStderr');
-      const jestOutput = JSON.parse(jestResult);
+      // Install Vitest using cache
+      await exec(codePath, 'npm install --save-dev vitest');
+      const vitestResult = await exec(
+        codePath,
+        'npx vitest run --reporter json',
+      );
+      const vitestOutput = JSON.parse(vitestResult);
 
       // Transform the Jest output to match the expected structure
       const transformedOutput = {
-        testResults: jestOutput.testResults.map((result) => ({
+        testResults: vitestOutput.testResults.map((result) => ({
           assertionResults: result.assertionResults.map((test) => ({
             ancestorTitles: test.ancestorTitles,
             title: test.title,
@@ -74,19 +59,28 @@ export class JavaScriptExecutor implements CodeExecutionStrategy {
           message: result.message,
           status: result.status,
           name: result.name,
+          console: result.console || [], // Include console output from test results
         })),
-        numFailedTestSuites: jestOutput.numFailedTestSuites,
-        numFailedTests: jestOutput.numFailedTests,
-        numPassedTestSuites: jestOutput.numPassedTestSuites,
-        numPassedTests: jestOutput.numPassedTests,
-        numPendingTestSuites: jestOutput.numPendingTestSuites,
-        numPendingTests: jestOutput.numPendingTests,
-        numRuntimeErrorTestSuites: jestOutput.numRuntimeErrorTestSuites,
-        numTotalTestSuites: jestOutput.numTotalTestSuites,
-        numTotalTests: jestOutput.numTotalTests,
-        success: jestOutput.success,
-        stdout: jestOutput.stdout || '',
-        stderr: jestOutput.stderr || '',
+        numFailedTestSuites: vitestOutput.numFailedTestSuites,
+        numFailedTests: vitestOutput.numFailedTests,
+        numPassedTestSuites: vitestOutput.numPassedTestSuites,
+        numPassedTests: vitestOutput.numPassedTests,
+        numPendingTestSuites: vitestOutput.numPendingTestSuites,
+        numPendingTests: vitestOutput.numPendingTests,
+        numRuntimeErrorTestSuites: vitestOutput.numRuntimeErrorTestSuites,
+        numTotalTestSuites: vitestOutput.numTotalTestSuites,
+        numTotalTests: vitestOutput.numTotalTests,
+        success: vitestOutput.success,
+        stdout: vitestOutput.stdout || '',
+        stderr: vitestOutput.stderr || '',
+        // Aggregate all console output from test results
+        consoleOutput: vitestOutput.testResults
+          .flatMap((result) => result.console || [])
+          .map((entry) => ({
+            type: entry.type,
+            message: entry.message,
+            origin: entry.origin,
+          })),
       };
 
       return createExecutionResponse(transformedOutput);
@@ -119,36 +113,19 @@ export class JavaScriptExecutor implements CodeExecutionStrategy {
 }
 
 export class JavaScriptFileWriter implements FileWriterStrategy {
-  async write(filePath: string, code: string): Promise<void> {
-    // Write the main code file
-    await createFile(
-      {
-        id: 'main',
-        filename: 'index.test',
-        extension: 'js',
-        content: code,
-      },
-      filePath,
-    );
+  async write(filePath: string, files: AlgorithmFile[]): Promise<void> {
+    // Write user files
+    for (const file of files) {
+      await createFile(file, filePath);
+    }
 
-    // Write Jest config
+    // Write Vitest config
     await createFile(
       {
-        id: 'jest-config',
-        filename: 'jest.config',
+        id: 'vitest-setup',
+        name: 'vitest.config',
         extension: 'js',
-        content: jestConfig,
-      },
-      filePath,
-    );
-
-    // Write Jest setup
-    await createFile(
-      {
-        id: 'jest-setup',
-        filename: 'jest.setup',
-        extension: 'js',
-        content: jestSetup,
+        content: vitestConfig,
       },
       filePath,
     );
@@ -157,7 +134,7 @@ export class JavaScriptFileWriter implements FileWriterStrategy {
     await createFile(
       {
         id: 'package',
-        filename: 'package',
+        name: 'package',
         extension: 'json',
         content: JSON.stringify(
           {
@@ -165,7 +142,7 @@ export class JavaScriptFileWriter implements FileWriterStrategy {
             version: '1.0.0',
             private: true,
             scripts: {
-              test: 'jest',
+              test: 'vitest',
             },
           },
           null,

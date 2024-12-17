@@ -2,6 +2,7 @@ import { CodeExecutionStrategy, FileWriterStrategy } from '../interfaces';
 import { createFile } from 'src/utils/fs';
 import { exec } from 'src/utils/exec';
 import { createExecutionResponse } from './testExecutionResult';
+import { AlgorithmFile } from 'src/execute/interfaces';
 
 export class GoExecutor implements CodeExecutionStrategy {
   async execute(codePath: string) {
@@ -142,40 +143,31 @@ export class GoExecutor implements CodeExecutionStrategy {
 }
 
 export class GoFileWriter implements FileWriterStrategy {
-  async write(filePath: string, code: string): Promise<void> {
+  async write(filePath: string, files: AlgorithmFile[]): Promise<void> {
     // Initialize Go module
     await exec(filePath, 'go mod init code-execution');
 
-    // Write the main code file
-    await createFile(
-      {
-        id: 'main',
-        filename: 'main_test',
-        extension: 'go',
-        content: code,
-      },
-      filePath,
-    );
+    // Write user files
+    for (const file of files) {
+      if (file.name === 'test') {
+        // _test.go is the convention for test files in Go
+        file.name = 'test_test';
+      }
+      await createFile(file, filePath);
+    }
 
     // Write go.mod file with required dependencies
     await createFile(
       {
         id: 'go-mod',
-        filename: 'go',
+        name: 'go',
         extension: 'mod',
         content: `module code-execution
 
 go 1.21
-
-require (
-	github.com/stretchr/testify v1.8.4
-)
 `,
       },
       filePath,
     );
-
-    // Install dependencies
-    await exec(filePath, 'go mod tidy');
   }
 }

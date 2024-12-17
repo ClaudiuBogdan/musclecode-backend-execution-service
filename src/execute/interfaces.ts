@@ -17,22 +17,47 @@ export enum CodeLanguage {
   GO = 'go',
 }
 
+export enum AlgorithmFileType {
+  SOLUTION = 'solution',
+  TEST = 'test',
+}
+
+export class AlgorithmFile {
+  @IsString()
+  id: string;
+  @IsString()
+  name: string;
+  @IsString()
+  @IsEnum(AlgorithmFileType)
+  type: AlgorithmFileType;
+  @IsString()
+  extension: string;
+  @IsString()
+  content: string;
+  @IsString()
+  language: CodeLanguage;
+  @IsBoolean()
+  @IsOptional()
+  readOnly?: boolean;
+  @IsBoolean()
+  @IsOptional()
+  required?: boolean;
+}
+
 export class ExecuteCodeDTO {
   @IsString()
-  @IsNotEmpty()
-  submissionId: string;
-
-  @IsString()
-  @IsNotEmpty()
   userId: string;
 
   @IsString()
-  @IsNotEmpty()
-  code: string;
+  submissionId: string;
 
-  @IsNotEmpty()
-  @IsEnum(CodeLanguage)
-  language: CodeLanguage;
+  @IsString()
+  language: string;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AlgorithmFile)
+  files: AlgorithmFile[];
 }
 
 export class TestItem {
@@ -166,42 +191,54 @@ export class TestResult {
   tags: string[] | null;
 }
 
-export class CodeExecutionResponse {
-  @IsString()
-  @IsEnum(['execution success', 'execution error'])
-  type: 'execution success' | 'execution error';
-
-  @IsString()
+export interface CodeExecutionResponse {
+  type: string;
   stdout: string;
-
-  @IsString()
   stderr: string;
-
-  @IsNumber()
   exitCode: number;
-
-  @IsNumber()
   wallTime: number;
-
-  @IsBoolean()
   timedOut: boolean;
-
-  @IsString()
   message: string;
-
-  @IsString()
   token: string;
-
-  @ValidateNested()
-  @Type(() => TestResult)
-  result: TestResult;
+  result: {
+    serverError: boolean;
+    completed: boolean;
+    output: any[];
+    successMode: string;
+    passed: number;
+    failed: number;
+    errors: number;
+    error: string | null;
+    assertions: {
+      passed: number;
+      failed: number;
+      hidden: { passed: number; failed: number };
+    };
+    specs: {
+      passed: number;
+      failed: number;
+      hidden: { passed: number; failed: number };
+    };
+    unweighted: {
+      passed: number;
+      failed: number;
+    };
+    weighted: {
+      passed: number;
+      failed: number;
+    };
+    timedOut: boolean;
+    wallTime: number;
+    testTime: number;
+    tags: any;
+  };
 }
 
 export class FileData {
   @IsString()
   id: string;
   @IsString()
-  filename: string;
+  name: string;
   @IsString()
   extension: string;
   @IsString()
