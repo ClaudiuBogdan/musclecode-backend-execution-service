@@ -47,13 +47,7 @@ export class JavaScriptExecutor implements CodeExecutionStrategy {
       // Transform the Jest output to match the expected structure
       const transformedOutput = {
         testResults: vitestOutput.testResults.map((result) => ({
-          assertionResults: result.assertionResults.map((test) => ({
-            ancestorTitles: test.ancestorTitles,
-            title: test.title,
-            status: test.status,
-            duration: test.duration,
-            failureMessages: test.failureMessages || [],
-          })),
+          assertionResults: result.assertionResults,
           startTime: result.startTime,
           endTime: result.endTime,
           message: result.message,
@@ -72,7 +66,8 @@ export class JavaScriptExecutor implements CodeExecutionStrategy {
         numTotalTests: vitestOutput.numTotalTests,
         success: vitestOutput.success,
         stdout: vitestOutput.stdout || '',
-        stderr: vitestOutput.stderr || '',
+        stderr:
+          vitestOutput.stderr || vitestOutput.testResults[0]?.message || '', // Include test result message in stderr
         // Aggregate all console output from test results
         consoleOutput: vitestOutput.testResults
           .flatMap((result) => result.console || [])

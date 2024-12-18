@@ -195,6 +195,7 @@ export const createExecutionResponse = (
 
   const stderr = [
     jestOutput.stderr || '',
+    testResults.message || '', // Include test result message in stderr
     ...consoleOutput
       .filter((log) => log.type === 'error')
       .map((log) => log.message),
@@ -213,14 +214,21 @@ export const createExecutionResponse = (
     .map((t) => t.failureMessages![0])
     .join('\n');
 
+  const finalErrorMessage = [testResults.message, errorMessages]
+    .filter(Boolean)
+    .join('\n')
+    .trim();
+
   return {
     type: allTestsPassed ? 'execution success' : 'execution error',
     stdout,
-    stderr: stderr || errorMessages, // Include error messages in stderr if no other stderr content
+    stderr: stderr || finalErrorMessage, // Include error messages in stderr if no other stderr content
     exitCode: allTestsPassed ? 0 : 1,
     wallTime,
     timedOut: false,
-    message: allTestsPassed ? 'All tests passed' : 'Some tests failed',
+    message:
+      finalErrorMessage ||
+      (allTestsPassed ? 'All tests passed' : 'Some tests failed'),
     token: '',
     result: {
       serverError: false,

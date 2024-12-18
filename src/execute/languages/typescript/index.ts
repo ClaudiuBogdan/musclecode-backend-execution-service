@@ -10,6 +10,7 @@ const { defineConfig } = require('vitest/config');
 module.exports = defineConfig({
   test: {
     environment: 'node',
+    timeout: 5000,
     include: ['**/test.ts'],
     globals: true,
     setupFiles: [],
@@ -26,7 +27,7 @@ module.exports = defineConfig({
       enabled: false,
     },
     cache: false,
-    failFast: true,
+    failFast: false,
     silent: false,
     reporters: ['json'],
   },
@@ -42,6 +43,7 @@ export class TypeScriptExecutor implements CodeExecutionStrategy {
         codePath,
         'npx vitest run --reporter json',
       );
+      console.log(vitestResult);
       const vitestOutput = JSON.parse(vitestResult);
 
       // Transform the Jest output to match the expected structure
