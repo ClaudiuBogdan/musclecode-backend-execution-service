@@ -1,48 +1,20 @@
 import { CodeExecutionStrategy, FileWriterStrategy } from '../interfaces';
-import { createFile } from 'src/utils/fs';
+import { createFile, setupTemplateSymlinks } from 'src/utils/fs';
 import { exec } from 'src/utils/exec';
 import { createExecutionResponse } from '../typescript/testExecutionResult';
 import { AlgorithmFile } from 'src/execute/interfaces';
+import { readFile } from 'fs/promises';
+import { join } from 'path';
 
-const vitestConfig = `
-const { defineConfig } = require('vitest/config');
-
-module.exports = defineConfig({
-  test: {
-    environment: 'node',
-    include: ['**/test.js'],
-    globals: true,
-    setupFiles: [],
-    maxThreads: 1,
-    minThreads: 1,
-    maxConcurrency: 1,
-    fileParallelism: false,
-    poolOptions: {
-      threads: {
-        singleThread: true,
-      },
-    },
-    coverage: {
-      enabled: false,
-    },
-    cache: false,
-    failFast: true,
-    silent: false,
-    reporters: ['json'],
-  },
-});
-`;
+const TEMPLATE_DIR = join(process.cwd(), 'templates/javascript');
 
 export class JavaScriptExecutor implements CodeExecutionStrategy {
   async execute(codePath: string) {
     try {
-      // Install Vitest using cache
-      await exec(codePath, 'npm install --save-dev vitest');
-      const vitestResult = await exec(
-        codePath,
-        'npx vitest run --reporter json',
+      await exec(codePath, 'npx vitest run --reporter json');
+      const vitestOutput = JSON.parse(
+        await readFile(join(codePath, 'test-output.json'), 'utf8'),
       );
-      const vitestOutput = JSON.parse(vitestResult);
 
       // Transform the Jest output to match the expected structure
       const transformedOutput = {
@@ -109,42 +81,13 @@ export class JavaScriptExecutor implements CodeExecutionStrategy {
 
 export class JavaScriptFileWriter implements FileWriterStrategy {
   async write(filePath: string, files: AlgorithmFile[]): Promise<void> {
-    // Write user files
+    // Set up symlinks for template files and create src directory
+    await setupTemplateSymlinks(TEMPLATE_DIR, filePath);
+
+    // Write user files to src directory
+    const srcDir = join(filePath, 'src');
     for (const file of files) {
-      await createFile(file, filePath);
+      await createFile(file, srcDir);
     }
-
-    // Write Vitest config
-    await createFile(
-      {
-        id: 'vitest-setup',
-        name: 'vitest.config',
-        extension: 'js',
-        content: vitestConfig,
-      },
-      filePath,
-    );
-
-    // Write package.json
-    await createFile(
-      {
-        id: 'package',
-        name: 'package',
-        extension: 'json',
-        content: JSON.stringify(
-          {
-            name: 'code-execution',
-            version: '1.0.0',
-            private: true,
-            scripts: {
-              test: 'vitest',
-            },
-          },
-          null,
-          2,
-        ),
-      },
-      filePath,
-    );
   }
 }

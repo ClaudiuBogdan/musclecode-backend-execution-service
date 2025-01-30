@@ -1,0 +1,11 @@
+{
+  "name": "javascript-execution-template",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "vitest"
+  },
+  "dependencies": {
+    "vitest": "^3.0.4"
+  }
+}
