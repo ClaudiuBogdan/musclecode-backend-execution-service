@@ -1,0 +1,13 @@
+{
+  "name": "typescript-execution-template",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "vitest"
+  },
+  "dependencies": {
+    "vitest": "^3.0.4",
+    "typescript": "^5.3.3",
+    "@types/node": "^20.11.0"
+  }
+}

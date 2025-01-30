@@ -1,82 +1,26 @@
 import { CodeExecutionStrategy, FileWriterStrategy } from '../interfaces';
-import { createFile } from 'src/utils/fs';
+import { createFile, setupTemplateSymlinks } from 'src/utils/fs';
 import { exec } from 'src/utils/exec';
 import { createExecutionResponse } from './testExecutionResult';
 import { AlgorithmFile } from 'src/execute/interfaces';
+import { readFile } from 'fs/promises';
+import { join } from 'path';
 
-const vitestConfig = `
-const { defineConfig } = require('vitest/config');
-
-module.exports = defineConfig({
-  test: {
-    environment: 'node',
-    timeout: 5000,
-    include: ['**/test.ts'],
-    globals: true,
-    setupFiles: [],
-    maxThreads: 1,
-    minThreads: 1,
-    maxConcurrency: 1,
-    fileParallelism: false,
-    poolOptions: {
-      threads: {
-        singleThread: true,
-      },
-    },
-    coverage: {
-      enabled: false,
-    },
-    cache: false,
-    failFast: false,
-    silent: false,
-    reporters: ['json'],
-  },
-});
-`;
+const TEMPLATE_DIR = join(process.cwd(), 'templates/typescript');
 
 export class TypeScriptExecutor implements CodeExecutionStrategy {
   async execute(codePath: string) {
     try {
-      // TODO: Remove this when we have a way to install dependencies
-      await exec(codePath, 'npm install --save-dev vitest');
-      const vitestResult = await exec(
+      // No need to install dependencies as they are already in the template
+      await exec(
         codePath,
-        'npx vitest run --reporter json',
+        'npx vitest run --reporter json --outputFile=./test-output.json',
       );
-      console.log(vitestResult);
-      const vitestOutput = JSON.parse(vitestResult);
+      const vitestOutput = JSON.parse(
+        await readFile(join(codePath, 'test-output.json'), 'utf8'),
+      );
 
-      // Transform the Jest output to match the expected structure
-      const transformedOutput = {
-        testResults: vitestOutput.testResults.map((result) => ({
-          assertionResults: result.assertionResults.map((test) => ({
-            ancestorTitles: test.ancestorTitles,
-            title: test.title,
-            status: test.status,
-            duration: test.duration,
-            failureMessages: test.failureMessages || [],
-          })),
-          startTime: result.startTime,
-          endTime: result.endTime,
-          message: result.message,
-          status: result.status,
-          name: result.name,
-        })),
-        numFailedTestSuites: vitestOutput.numFailedTestSuites,
-        numFailedTests: vitestOutput.numFailedTests,
-        numPassedTestSuites: vitestOutput.numPassedTestSuites,
-        numPassedTests: vitestOutput.numPassedTests,
-        numPendingTestSuites: vitestOutput.numPendingTestSuites,
-        numPendingTests: vitestOutput.numPendingTests,
-        numRuntimeErrorTestSuites: vitestOutput.numRuntimeErrorTestSuites,
-        numTotalTestSuites: vitestOutput.numTotalTestSuites,
-        numTotalTests: vitestOutput.numTotalTests,
-        success: vitestOutput.success,
-        stdout: vitestOutput.stdout || '',
-        stderr: vitestOutput.stderr || '',
-      };
-
-      return createExecutionResponse(transformedOutput);
+      return createExecutionResponse(vitestOutput);
     } catch (err) {
       return createExecutionResponse({
         testResults: [
@@ -107,66 +51,13 @@ export class TypeScriptExecutor implements CodeExecutionStrategy {
 
 export class TypeScriptFileWriter implements FileWriterStrategy {
   async write(filePath: string, files: AlgorithmFile[]): Promise<void> {
-    // Write user files
+    // Set up symlinks for template files and create src directory
+    await setupTemplateSymlinks(TEMPLATE_DIR, filePath);
+
+    // Write user files to src directory
+    const srcDir = join(filePath, 'src');
     for (const file of files) {
-      await createFile(file, filePath);
+      await createFile(file, srcDir);
     }
-
-    // Write Jest config
-    await createFile(
-      {
-        id: 'vitest-config',
-        name: 'vitest.config',
-        extension: 'js',
-        content: vitestConfig,
-      },
-      filePath,
-    );
-
-    // Write package.json
-    await createFile(
-      {
-        id: 'package',
-        name: 'package',
-        extension: 'json',
-        content: JSON.stringify(
-          {
-            name: 'code-execution',
-            version: '1.0.0',
-            private: true,
-            scripts: {
-              test: 'vitest',
-            },
-          },
-          null,
-          2,
-        ),
-      },
-      filePath,
-    );
-
-    // Write tsconfig.json
-    await createFile(
-      {
-        id: 'tsconfig',
-        name: 'tsconfig',
-        extension: 'json',
-        content: JSON.stringify(
-          {
-            compilerOptions: {
-              target: 'es2020',
-              module: 'commonjs',
-              strict: true,
-              esModuleInterop: true,
-              skipLibCheck: true,
-              forceConsistentCasingInFileNames: true,
-            },
-          },
-          null,
-          2,
-        ),
-      },
-      filePath,
-    );
   }
 }
