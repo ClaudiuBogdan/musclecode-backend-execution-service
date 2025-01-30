@@ -46,10 +46,7 @@ export class AlgorithmFile {
 
 export class ExecuteCodeDTO {
   @IsString()
-  userId: string;
-
-  @IsString()
-  submissionId: string;
+  algorithmId: string;
 
   @IsString()
   language: string;

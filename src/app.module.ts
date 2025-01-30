@@ -6,10 +6,20 @@ import { HealthController } from './health/health.controller';
 import { ExecuteModule } from './execute/execute.module';
 import { FileService } from './execute/files/file.service';
 import { ConfigModule } from '@nestjs/config';
+import { AuthGuard } from './auth/guards/auth.guard';
+import { APP_GUARD } from '@nestjs/core';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
-  imports: [HealthModule, ExecuteModule, ConfigModule.forRoot()],
+  imports: [AuthModule, HealthModule, ExecuteModule, ConfigModule.forRoot()],
   controllers: [AppController, HealthController],
-  providers: [AppService, FileService],
+  providers: [
+    AppService,
+    FileService,
+    {
+      provide: APP_GUARD,
+      useClass: AuthGuard,
+    },
+  ],
 })
 export class AppModule {}

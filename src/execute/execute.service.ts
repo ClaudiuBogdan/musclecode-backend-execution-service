@@ -8,11 +8,15 @@ import { ExecuteCodeDTO, CodeExecutionResponse } from './interfaces';
 export class ExecuteService {
   constructor(private readonly fileService: FileService) {}
 
-  async execute(payload: ExecuteCodeDTO): Promise<CodeExecutionResponse> {
+  async execute(
+    payload: ExecuteCodeDTO,
+    userId: string,
+  ): Promise<CodeExecutionResponse> {
     const basePath = path.resolve('./dist/code');
     const filesPath = path.join(
       basePath,
-      payload.submissionId ? path.basename(payload.submissionId) : 'temp',
+      userId,
+      payload.algorithmId ? path.basename(payload.algorithmId) : 'temp',
     );
 
     try {
