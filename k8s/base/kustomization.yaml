@@ -5,7 +5,7 @@ namespace: musclecode
 resources:
 - deployment.yaml
 - service.yaml
-
+- virtual-service.yaml
 commonLabels:
   app.kubernetes.io/name: musclecode-backend-execution-service
   app.kubernetes.io/part-of: musclecode
