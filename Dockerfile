@@ -1,7 +1,7 @@
 #
 # 🧑‍💻 Base Image for Shared Configuration
 #
-FROM debian:bookworm-slim as base
+FROM debian:bookworm-slim AS base
 
 # Install dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -39,52 +39,82 @@ WORKDIR /app
 RUN addgroup --system --gid 1001 app_user && \
     adduser --system --uid 1001 app_user 
 
-RUN chown app_user:app_user /app
-
-
-# Ensure safety
-USER app_user
-
 #
 # 🧪 Development Environment
 #
-FROM base as dev
-ENV NODE_ENV development
+FROM base AS dev
+ENV NODE_ENV=development
 
-# Install dependencies
-COPY --chown=app_user:app_user package.json yarn.lock ./
+# Copy package files first
+COPY package.json yarn.lock ./
+
+# Install main app dependencies
 RUN yarn --frozen-lockfile
 
-# Copy the rest of the application code
-COPY --chown=app_user:app_user . .
+# Copy the application code (excluding templates)
+COPY . .
+RUN rm -rf templates
+
+# Set ownership after files are copied
+RUN chown -R app_user:app_user /app
+
+# Switch to non-root user for safety
+USER app_user
 
 #
 # 🏗️ Build Environment
 #
-FROM dev as build
-ENV NODE_ENV production
+FROM dev AS build
+ENV NODE_ENV=production
 
-# Generate the production build. The build script runs "nest build" to compile the application.
-RUN yarn build && \
-    yarn install --frozen-lockfile --production && \
+# Generate the production build
+RUN yarn build
+
+# Install production dependencies
+RUN yarn install --frozen-lockfile --production && \
     yarn cache clean
 
-# Remove development dependencies not needed in production
+# Switch to root to handle templates
+USER root
+
+# Create templates directory structure
+RUN mkdir -p dist/templates
+
+# Copy and prepare templates
+COPY templates ./templates
+
+# Install template dependencies
+RUN cd templates/typescript && yarn --frozen-lockfile --production && cd ../.. && \
+    cd templates/javascript && yarn --frozen-lockfile --production && cd ../.. && \
+    . /opt/venv/bin/activate && \
+    cd templates/python && pip3 install -r requirements.txt && cd ../..
+
+# Copy templates to dist
+RUN cp -r templates/* dist/templates/ && \
+    chown -R app_user:app_user /app/dist /app/templates
+
+# Switch back to non-root user
+USER app_user
+
+# Remove development files
 RUN rm -rf src && \
     rm -rf node_modules/.cache
 
 #
 # 🚀 Production Environment
 #
-FROM base as prod
-ENV NODE_ENV production
+FROM base AS prod
+ENV NODE_ENV=production
 
 # Copy necessary files from build stage
 COPY --chown=app_user:app_user --from=build /app/dist ./dist
 COPY --chown=app_user:app_user --from=build /app/node_modules ./node_modules
+COPY --chown=app_user:app_user --from=build /app/templates ./templates
 COPY --chown=app_user:app_user firejail.profile /app/firejail.profile
 
 # Expose the port the app runs on
 EXPOSE 3000
+
+USER app_user
 
 CMD ["node", "dist/main.js"]

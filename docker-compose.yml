@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  musclecode-execution-worker:
+    build:
+      context: .
+      target: prod  # Use production build
+    container_name: musclecode-execution-worker
+    ports:
+      - "3002:3002"  # Use port 3002
+    env_file:
+      - .env
+    environment:
+      - APP_PORT=3002  # Set the application port
+    volumes:
+      - code-execution:/app/code  # Mount in app directory
+    security_opt:
+      - apparmor=unconfined  # Required for Firejail
+    cap_add:
+      - SYS_ADMIN  # Required for Firejail
+
+volumes:
+  code-execution:
+    name: musclecode-code-execution
+

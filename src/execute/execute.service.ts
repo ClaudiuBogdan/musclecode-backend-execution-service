@@ -12,7 +12,8 @@ export class ExecuteService {
     payload: ExecuteCodeDTO,
     userId: string,
   ): Promise<CodeExecutionResponse> {
-    const basePath = path.resolve('./dist/code');
+    // Use process.cwd() to get the current working directory in both environments
+    const basePath = path.join(process.cwd(), 'code');
     const filesPath = path.join(
       basePath,
       userId,
@@ -28,7 +29,6 @@ export class ExecuteService {
 
       return results;
     } catch (error) {
-      console.error('Execution error:', error);
       return {
         type: 'execution error',
         stdout: '',
@@ -64,7 +64,6 @@ export class ExecuteService {
       };
     } finally {
       // Clean up files after execution
-      // TODO: Uncomment this when we have a way to remove the files
       await this.fileService.removeDirectory(filesPath);
     }
   }
