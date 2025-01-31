@@ -4,6 +4,7 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // TODO: only for dev
   app.enableCors({
     origin: ['http://localhost:5173'],
   });
