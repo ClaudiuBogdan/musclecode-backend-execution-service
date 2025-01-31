@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: musclecode-backend-execution-service
+  annotations:
+    image-sha: latest
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: musclecode-backend-execution-service
+  template:
+    metadata:
+      labels:
+        app: musclecode-backend-execution-service
+    spec:
+      imagePullSecrets:
+        - name: registry-credentials
+      containers:
+        - name: musclecode-backend-execution-service
+          image: harbor.devostack.com/musclecode/musclecode-backend-execution-service:latest
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - secretRef:
+                name: musclecode-backend-execution-service-secrets
+          resources:
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 20

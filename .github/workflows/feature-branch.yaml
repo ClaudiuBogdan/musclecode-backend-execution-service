@@ -1,0 +1,67 @@
+name: Feature Branch Pipeline
+
+on:
+  push:
+    branches:
+      - 'feature/**'
+  pull_request:
+    branches:
+      - dev
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - name: Get Secrets from Bitwarden
+        uses: bitwarden/sm-action@v1
+        with:
+          access_token: ${{ secrets.BW_ACCESS_TOKEN }}
+          secrets: |
+            b964f6cf-76df-49cb-907a-b26600c5c7b8 > DOCKER_REGISTRY_URL
+            5b1939aa-866f-4a3c-80b1-b26600c5f391 > DOCKER_USERNAME
+            946357bf-ddfe-4de1-92a2-b26600c6cdc4 > DOCKER_PASSWORD
+      
+      - name: Login to Docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.DOCKER_REGISTRY_URL }}
+          username: ${{ env.DOCKER_USERNAME }}
+          password: ${{ env.DOCKER_PASSWORD }}
+      
+      - name: Build and push
+        if: github.event_name == 'pull_request'
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.DOCKER_REGISTRY_URL }}/musclecode-backend-execution-service:${{ github.sha }}
+
+      - name: Checkout feature branch
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch origin ${{ github.event.pull_request.head.ref }}
+          git checkout ${{ github.event.pull_request.head.ref }}
+
+      - name: Update image tag in kustomization
+        if: github.event_name == 'pull_request'
+        run: |
+          cd ./k8s/base
+          kustomize edit set image harbor.devostack.com/musclecode/musclecode-backend-execution-service=harbor.devostack.com/musclecode/musclecode-backend-execution-service:${{ github.sha }}
+
+      - name: Commit and push changes
+        if: github.event_name == 'pull_request'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add .
+          git commit -m "ci: update image tag to ${{ github.sha }}"
+          git push

@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: musclecode-dev
+
+resources:
+  - ../../base
+  - ./secrets/sealed-app-secret.yaml
+  - ./secrets/sealed-registry-secret.yaml
+
+patches:
+  - target:
+      kind: Deployment
+      name: musclecode-backend-execution-service
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: musclecode-dev
+
+  - target:
+      kind: Service
+      name: musclecode-backend-execution-service
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: musclecode-dev

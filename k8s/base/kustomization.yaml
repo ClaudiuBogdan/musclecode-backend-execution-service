@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: musclecode
+
+resources:
+- deployment.yaml
+- service.yaml
+
+commonLabels:
+  app.kubernetes.io/name: musclecode-backend-execution-service
+  app.kubernetes.io/part-of: musclecode
+
+
+images:
+- name: harbor.devostack.com/musclecode/musclecode-backend-execution-service
+  newName: harbor.devostack.com/musclecode/musclecode-backend-execution-service
+  newTag: 5e84873f8665b1e1f88a9ce57e4a9a5bed46fb0e
+commonAnnotations:
+  image-sha: 67e9e107b614c05fce6fa3b44ed787c7ee70e14c

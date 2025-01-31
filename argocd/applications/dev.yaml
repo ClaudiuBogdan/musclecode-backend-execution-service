@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: musclecode-backend-execution-service-dev
+  namespace: argocd
+spec:
+  project: musclecode
+  source:
+    kustomize:
+      commonAnnotationsEnvsubst: true
+    repoURL: 'https://github.com/ClaudiuBogdan/musclecode-backend-execution-service'
+    targetRevision: dev
+    path: ./k8s/overlays/dev
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: musclecode-dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
