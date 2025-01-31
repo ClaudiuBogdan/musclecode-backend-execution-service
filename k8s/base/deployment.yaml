@@ -15,7 +15,7 @@ spec:
         app: musclecode-backend-execution-service
     spec:
       imagePullSecrets:
-        - name: registry-credentials
+        - name: registry-credentials-execution-service
       containers:
         - name: musclecode-backend-execution-service
           image: harbor.devostack.com/musclecode/musclecode-backend-execution-service:latest
