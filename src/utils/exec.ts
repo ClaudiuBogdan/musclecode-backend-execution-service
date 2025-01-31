@@ -25,12 +25,7 @@ export async function exec(
           const timeoutError = new Error(
             `Command timed out after ${options.timeoutMs}ms`,
           );
-          if (options.shouldThrowError) {
-            reject(timeoutError);
-          } else {
-            resolve(''); // Return empty string on timeout if not throwing
-          }
-          return;
+          return reject(timeoutError);
         }
 
         if (options.shouldThrowError && error) {
