@@ -9,7 +9,6 @@ k8s/
 ├── base/                 # Base configurations
 │   ├── deployment.yaml
 │   ├── service.yaml
-│   ├── postgres-deployment.yaml
 │   └── kustomization.yaml
 └── overlays/            # Environment-specific configurations
     ├── dev/
@@ -172,13 +171,7 @@ kubectl get sealedsecret -n musclecode-<env>
 kubectl get secret -n musclecode-<env>
 ```
 
-2. Check PostgreSQL cluster status:
-```bash
-kubectl get postgresql -n musclecode-<env>
-kubectl describe postgresql postgres-db -n musclecode-<env>
-```
-
-3. View application logs:
+2. View application logs:
 ```bash
 kubectl logs -n musclecode-<env> deployment/musclecode-backend-execution-service
 ```
