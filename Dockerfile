@@ -115,6 +115,10 @@ COPY --chown=app_user:app_user firejail.profile /app/firejail.profile
 # Expose the port the app runs on
 EXPOSE 3000
 
+# Added chown command to ensure /app is writable by app_user
+USER root
+RUN chown -R app_user:app_user /app
+
 USER app_user
 
 CMD ["node", "dist/main.js"]
