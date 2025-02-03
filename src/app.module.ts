@@ -9,9 +9,16 @@ import { ConfigModule } from '@nestjs/config';
 import { AuthGuard } from './auth/guards/auth.guard';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthModule } from './auth/auth.module';
+import { LoggerModule } from './logger/logger.module';
 
 @Module({
-  imports: [AuthModule, HealthModule, ExecuteModule, ConfigModule.forRoot()],
+  imports: [
+    LoggerModule,
+    AuthModule,
+    HealthModule,
+    ExecuteModule,
+    ConfigModule.forRoot(),
+  ],
   controllers: [AppController, HealthController],
   providers: [
     AppService,
