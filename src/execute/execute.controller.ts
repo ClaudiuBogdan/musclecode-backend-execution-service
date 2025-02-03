@@ -29,9 +29,9 @@ export class ExecuteController {
     @User('id') userId: string,
   ): Promise<CodeExecutionResponse> {
     const logger = this.logger.child({
-      userId,
-      algorithmId: payload.algorithmId,
-      language: payload.language,
+      attributes: {
+        userId,
+      },
     });
 
     logger.log('Received code execution request');

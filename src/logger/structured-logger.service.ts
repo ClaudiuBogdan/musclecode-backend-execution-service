@@ -65,6 +65,10 @@ export class StructuredLogger extends ConsoleLogger implements OnModuleDestroy {
     childLogger.logger.defaultMeta = {
       ...this.logger.defaultMeta,
       ...metadata,
+      attributes: {
+        ...this.logger.defaultMeta?.attributes,
+        ...metadata.attributes,
+      },
     };
     return childLogger;
   }
