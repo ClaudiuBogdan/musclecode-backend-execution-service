@@ -12,7 +12,25 @@ import {
 } from '@opentelemetry/semantic-conventions';
 import { SignozTransport } from './logger/signoz.transport';
 
-const { combine, timestamp, json } = winston.format;
+const { combine, timestamp, printf } = winston.format;
+
+// Custom format function that converts logs into OpenTelemetry log format
+const otelLogFormat = printf(({ level, message, timestamp, ...metadata }) => {
+  const logEntry = {
+    ts: timestamp, // Timestamp in ISO format
+    severity: level.toUpperCase(), // Convert level to uppercase
+    body: { message }, // Main log message placed in the body field
+    trace_id: metadata.trace_id || undefined,
+    span_id: metadata.span_id || undefined,
+    trace_flags: metadata.trace_flags || undefined,
+    attributes: { ...metadata },
+  };
+
+  Object.keys(logEntry).forEach(
+    (key) => logEntry[key] === undefined && delete logEntry[key],
+  );
+  return JSON.stringify(logEntry);
+});
 
 // Environment variables configuration
 const SIGNOZ_HOST = process.env.SIGNOZ_HOST;
@@ -60,24 +78,12 @@ const otelLogger = loggerProvider.getLogger('winston-logger');
 // Create and configure the Winston logger with both Console and Signoz transports
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: combine(timestamp(), json()),
+  format: combine(timestamp(), otelLogFormat),
   // TODO: read from file and update on deployment
-  defaultMeta: {
-    service: resource.attributes[ATTR_SERVICE_NAME],
-    environment: resource.attributes.environment,
-    version: resource.attributes[ATTR_SERVICE_VERSION],
-  },
+  defaultMeta: {},
   transports: [
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.simple(),
-      ),
-    }),
+    new winston.transports.Console(),
     new SignozTransport({
-      host: SIGNOZ_HOST,
-      path: SIGNOZ_PATH,
-      level: process.env.LOG_LEVEL || 'info',
       otelLogger,
     }),
   ],

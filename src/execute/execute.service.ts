@@ -21,9 +21,9 @@ export class ExecuteService {
     userId: string,
   ): Promise<CodeExecutionResponse> {
     const logger = this.logger.child({
-      userId,
-      algorithmId: payload.algorithmId,
-      language: payload.language,
+      attributes: {
+        userId,
+      },
     });
 
     // Use process.cwd() to get the current working directory in both environments
