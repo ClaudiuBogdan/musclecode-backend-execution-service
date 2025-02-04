@@ -8,17 +8,12 @@ import * as jwt from 'jsonwebtoken';
 import fetch from 'node-fetch';
 import type { DecodedToken } from '../interfaces/decoded-token.interface';
 import { StructuredLogger } from 'src/logger/structured-logger.service';
-
 @Injectable()
 export class KeycloakService implements OnModuleInit {
-  private logger: StructuredLogger;
   private publicKey: string | null = null;
+  private readonly logger = new StructuredLogger('KeycloakService');
 
-  constructor(private configService: ConfigService) {
-    this.logger = new StructuredLogger().child({
-      context: 'KeycloakService',
-    });
-  }
+  constructor(private configService: ConfigService) {}
 
   async onModuleInit() {
     await this.fetchPublicKey();

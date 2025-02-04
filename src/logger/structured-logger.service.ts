@@ -11,9 +11,10 @@ interface LogEntry {
 export class StructuredLogger extends ConsoleLogger implements OnModuleDestroy {
   private readonly logger: winston.Logger;
 
-  constructor() {
+  constructor(context?: string) {
     super();
     this.logger = logger;
+    this.context = context;
   }
 
   async onModuleDestroy() {
@@ -34,6 +35,7 @@ export class StructuredLogger extends ConsoleLogger implements OnModuleDestroy {
   }
 
   log(message: string, extraInfo?: string | Record<string, any>): void {
+    this.addDefaultMetadata();
     this.logger.info(message, this.formatExtraInfo(extraInfo));
   }
 
@@ -46,18 +48,22 @@ export class StructuredLogger extends ConsoleLogger implements OnModuleDestroy {
       stack: traceDetails,
       extraInfo: extraInfo,
     });
+    this.addDefaultMetadata();
     this.logger.error(message, logEntry);
   }
 
   warn(message: string, extraInfo?: string | Record<string, any>): void {
+    this.addDefaultMetadata();
     this.logger.warn(message, this.formatExtraInfo(extraInfo));
   }
 
   debug(message: string, extraInfo?: string | Record<string, any>): void {
+    this.addDefaultMetadata();
     this.logger.debug(message, this.formatExtraInfo(extraInfo));
   }
 
   verbose(message: string, extraInfo?: string | Record<string, any>): void {
+    this.addDefaultMetadata();
     this.logger.verbose(message, this.formatExtraInfo(extraInfo));
   }
 
@@ -65,19 +71,23 @@ export class StructuredLogger extends ConsoleLogger implements OnModuleDestroy {
     return asyncLocalStorage.getStore()?.userId;
   }
 
-  child(metadata: Record<string, any>): StructuredLogger {
-    const childLogger = new StructuredLogger();
-
+  private addDefaultMetadata() {
     const user_id = this.getUserId();
-    childLogger.logger.defaultMeta = {
-      ...this.logger.defaultMeta,
-      ...metadata,
-      attributes: {
-        ...this.logger.defaultMeta?.attributes,
-        ...metadata.attributes,
-        ...(user_id ? { user_id } : {}),
-      },
-    };
-    return childLogger;
+    if (!this.logger.defaultMeta) {
+      this.logger.defaultMeta = {
+        attributes: {
+          context: '',
+        },
+      };
+    }
+    if (user_id) {
+      this.logger.defaultMeta.attributes.user_id = user_id;
+    }
+    if (this.context) {
+      const defaultMetadata = this.logger.defaultMeta || {};
+      defaultMetadata.attributes = defaultMetadata.attributes || {};
+      defaultMetadata.attributes.context = this.context;
+      this.logger.defaultMeta = defaultMetadata;
+    }
   }
 }

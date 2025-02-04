@@ -32,12 +32,11 @@ export class SignozTransport extends Transport {
     const body = {
       ...info,
     };
-    delete body.message;
     delete body.attributes;
 
     const attributes = {
-      ...info.attributes,
       message: info.message,
+      ...info.attributes,
     };
 
     this.otelLogger.emit({
