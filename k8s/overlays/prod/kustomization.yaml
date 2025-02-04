@@ -35,3 +35,11 @@ patches:
       - op: replace
         path: /spec/hosts/0
         value: "execution-service.api.musclecode.devostack.com"
+
+  - target:
+      kind: ConfigMap
+      name: musclecode-backend-execution-service
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: musclecode-prod
