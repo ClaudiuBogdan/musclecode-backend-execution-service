@@ -3,6 +3,8 @@ kind: ConfigMap
 metadata:
   name: musclecode-execution-worker-config
   namespace: musclecode
+  annotations:
+    argocd.argoproj.io/sync-wave: "-5"
 data:
   # Application Configuration
   APP_NAME: "musclecode-backend-execution-service"
