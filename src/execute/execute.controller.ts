@@ -13,14 +13,8 @@ import { StructuredLogger } from 'src/logger/structured-logger.service';
 
 @Controller('execute')
 export class ExecuteController {
-  private logger: StructuredLogger;
-
-  constructor(
-    private readonly executeService: ExecuteService,
-    logger: StructuredLogger,
-  ) {
-    this.logger = logger.child({ context: 'ExecuteController' });
-  }
+  private readonly logger = new StructuredLogger('ExecuteController');
+  constructor(private readonly executeService: ExecuteService) {}
 
   @UseGuards(AuthGuard)
   @Post()
@@ -28,10 +22,7 @@ export class ExecuteController {
     @Body(new ValidationPipe()) payload: ExecuteCodeDTO,
     @User('id') userId: string,
   ): Promise<CodeExecutionResponse> {
-    const logger = this.logger.child({});
-
-    logger.log('Received code execution request');
-
+    this.logger.log('Received code execution request');
     try {
       const result = await this.executeService.execute(payload, userId);
 
@@ -40,13 +31,13 @@ export class ExecuteController {
         timedOut: result.timedOut,
         wallTime: result.wallTime,
       });
-      logger.log(`Code execution completed successfully`, {
+      this.logger.log(`Code execution completed successfully`, {
         executionStats,
       });
 
       return result;
     } catch (error) {
-      logger.error('Code execution failed', error.stack);
+      this.logger.error('Code execution failed', error.stack);
       throw error;
     }
   }
