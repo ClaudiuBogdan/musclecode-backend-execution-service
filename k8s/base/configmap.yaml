@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: musclecode-execution-worker-config
+data:
+  # Application Configuration
+  APP_NAME: "musclecode-backend-execution-service"
+  NODE_ENV: "production"
+  APP_PORT: "3000"
+  
+  # Logging Configuration
+  LOG_LEVEL: "INFO"
+  LOG_BATCH_SIZE: "100"
+  FLUSH_INTERVAL: "5000"
+  
+  # Observability Endpoints
+  LOG_ENDPOINT: "http://signoz-otel-collector.signoz.svc.cluster.local:4318/v1/logs"
+  TRACE_ENDPOINT: "http://signoz-otel-collector.signoz.svc.cluster.local:4318/v1/traces"
+  
+  # Kubernetes Cluster Information
+  K8S_CLUSTER_NAME: "default" # This should be overridden in overlays
+  
