@@ -52,6 +52,8 @@ const resource = new Resource({
   'k8s.pod.name': config.K8S_POD_NAME,
 });
 
+console.log('Logger resources', resource);
+
 // Construct the OTLP URL using protocol, host, port, and path
 const otlpUrl = config.LOG_ENDPOINT;
 
@@ -81,11 +83,11 @@ const otelLogger = loggerProvider.getLogger('winston-logger');
 // Create and configure the Winston logger with both Console and Signoz transports
 const logger = winston.createLogger({
   level: config.LOG_LEVEL,
-  format: combine(timestamp(), otelLogFormat),
-  // TODO: read from file and update on deployment
-  defaultMeta: {},
+  defaultMeta: { attributes: {} },
   transports: [
-    new winston.transports.Console(),
+    new winston.transports.Console({
+      format: combine(timestamp(), otelLogFormat),
+    }),
     new SignozTransport({
       otelLogger,
     }),
