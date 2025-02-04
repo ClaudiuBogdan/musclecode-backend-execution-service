@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import { config } from './config/load-config';
 import * as winston from 'winston';
 import {
   LoggerProvider,
@@ -33,24 +33,20 @@ const otelLogFormat = printf(({ level, message, timestamp, ...metadata }) => {
 });
 
 // Environment variables configuration
-const SIGNOZ_HOST = process.env.SIGNOZ_HOST;
-const SIGNOZ_PATH = process.env.SIGNOZ_PATH;
 
-if (!SIGNOZ_HOST || !SIGNOZ_PATH) {
-  console.warn(
-    'Warning: SIGNOZ_HOST or SIGNOZ_PATH environment variables are not set',
-  );
+if (!config.LOG_ENDPOINT) {
+  console.warn('Warning: LOG_ENDPOINT environment variables are not set');
 }
 
 // Create a Resource to represent this service
 const resource = new Resource({
-  [ATTR_SERVICE_NAME]: process.env.npm_package_name || 'my-service',
-  [ATTR_SERVICE_VERSION]: process.env.npm_package_version || '0.1.0',
-  environment: process.env.NODE_ENV || 'development',
+  [ATTR_SERVICE_NAME]: config.APP_NAME || 'my-service',
+  [ATTR_SERVICE_VERSION]: config.APP_VERSION || '0.1.0',
+  environment: config.NODE_ENV,
 });
 
 // Construct the OTLP URL using protocol, host, port, and path
-const otlpUrl = `${SIGNOZ_HOST}/${SIGNOZ_PATH}`;
+const otlpUrl = `${config.LOG_ENDPOINT}`;
 
 // Setup OTLP Log Exporter to send logs to Signoz with proper configuration
 const otlpLogExporter = new OTLPLogExporter({
@@ -77,7 +73,7 @@ const otelLogger = loggerProvider.getLogger('winston-logger');
 
 // Create and configure the Winston logger with both Console and Signoz transports
 const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
+  level: config.LOG_LEVEL,
   format: combine(timestamp(), otelLogFormat),
   // TODO: read from file and update on deployment
   defaultMeta: {},
