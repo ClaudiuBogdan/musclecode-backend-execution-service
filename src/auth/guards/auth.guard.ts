@@ -47,6 +47,7 @@ export class AuthGuard implements CanActivate {
       // Then get the user info and roles
       const user = await this.authService.validateUser(token);
       request.user = user;
+
       return true;
     } catch (error: unknown) {
       console.error('Authentication failed:', error);

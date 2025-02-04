@@ -20,11 +20,7 @@ export class ExecuteService {
     payload: ExecuteCodeDTO,
     userId: string,
   ): Promise<CodeExecutionResponse> {
-    const logger = this.logger.child({
-      attributes: {
-        userId,
-      },
-    });
+    const logger = this.logger.child({});
 
     // Use process.cwd() to get the current working directory in both environments
     const basePath = path.join(process.cwd(), 'code');

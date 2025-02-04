@@ -28,11 +28,7 @@ export class ExecuteController {
     @Body(new ValidationPipe()) payload: ExecuteCodeDTO,
     @User('id') userId: string,
   ): Promise<CodeExecutionResponse> {
-    const logger = this.logger.child({
-      attributes: {
-        userId,
-      },
-    });
+    const logger = this.logger.child({});
 
     logger.log('Received code execution request');
 
