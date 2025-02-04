@@ -3,11 +3,10 @@ import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentation
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { Resource } from '@opentelemetry/resources';
 import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
-import { SIGNOZ_TRACES_ENDPOINT } from './config/logger.config';
+import { config } from './config/load-config';
 
-// TODO: Move to config
 const traceExporter = new OTLPTraceExporter({
-  url: SIGNOZ_TRACES_ENDPOINT,
+  url: config.TRACE_ENDPOINT,
 });
 
 export const otelSDK = new NodeSDK({

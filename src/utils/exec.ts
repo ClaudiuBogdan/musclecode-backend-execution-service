@@ -1,5 +1,5 @@
 import { exec as execCmd } from 'child_process';
-import { config } from 'src/config';
+import { config } from '../config/load-config';
 
 export interface ExecOptions {
   shouldThrowError?: boolean;
@@ -18,7 +18,7 @@ export async function exec(
   };
   return new Promise((resolve, reject) => {
     execCmd(
-      `cd ${codePath} && ${config.isDev ? '' : 'firejail --config=/app/firejail.profile'} ${command}`,
+      `cd ${codePath} && ${config.NODE_ENV === 'development' ? '' : 'firejail --config=/app/firejail.profile'} ${command}`,
       { timeout: options.timeoutMs },
       (error, stdout, stderr) => {
         if (error?.signal === 'SIGTERM') {
