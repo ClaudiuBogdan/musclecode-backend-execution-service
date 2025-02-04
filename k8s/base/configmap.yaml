@@ -12,13 +12,13 @@ data:
   APP_PORT: "3000"
   
   # Logging Configuration
-  LOG_LEVEL: "INFO"
+  LOG_LEVEL: "DEBUG"
   LOG_BATCH_SIZE: "100"
   FLUSH_INTERVAL: "5000"
   
   # Observability Endpoints
-  LOG_ENDPOINT: "http://signoz-otel-collector.signoz.svc.cluster.local:4318/v1/logs"
-  TRACE_ENDPOINT: "http://signoz-otel-collector.signoz.svc.cluster.local:4318/v1/traces"
+  LOG_ENDPOINT: "https://otel.devostack.com/v1/logs"
+  TRACE_ENDPOINT: "https://otel.devostack.com/v1/traces"
   
   # Kubernetes Cluster Information
   K8S_CLUSTER_NAME: "default" # This should be overridden in overlays
