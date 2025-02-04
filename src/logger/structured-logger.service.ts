@@ -1,6 +1,7 @@
 import { ConsoleLogger, Injectable, OnModuleDestroy } from '@nestjs/common';
 import * as winston from 'winston';
 import logger from '../logger';
+import { asyncLocalStorage } from 'src/interceptors/request-context';
 
 interface LogEntry {
   extraInfo?: string | Record<string, any>;
@@ -60,14 +61,21 @@ export class StructuredLogger extends ConsoleLogger implements OnModuleDestroy {
     this.logger.verbose(message, this.formatExtraInfo(extraInfo));
   }
 
+  private getUserId(): string | undefined {
+    return asyncLocalStorage.getStore()?.userId;
+  }
+
   child(metadata: Record<string, any>): StructuredLogger {
     const childLogger = new StructuredLogger();
+
+    const user_id = this.getUserId();
     childLogger.logger.defaultMeta = {
       ...this.logger.defaultMeta,
       ...metadata,
       attributes: {
         ...this.logger.defaultMeta?.attributes,
         ...metadata.attributes,
+        ...(user_id ? { user_id } : {}),
       },
     };
     return childLogger;

@@ -28,8 +28,6 @@ export class SignozTransport extends Transport {
   log(info: any, callback: () => void): void {
     setImmediate(() => this.emit('logged', info));
 
-    console.log('============= info ========', info);
-    console.log('=====================');
     // Use OpenTelemetry logger if available
     const body = {
       ...info,
