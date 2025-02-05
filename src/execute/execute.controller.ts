@@ -22,21 +22,55 @@ export class ExecuteController {
     @Body(new ValidationPipe()) payload: ExecuteCodeDTO,
     @User('id') userId: string,
   ): Promise<CodeExecutionResponse> {
-    this.logger.log('Received code execution request');
+    this.logger.debug('Processing code execution request', {
+      userId,
+      language: payload.language,
+      algorithmId: payload.algorithmId,
+      fileCount: payload.files?.length,
+    });
+
     try {
+      this.logger.debug('Validating request payload', {
+        files: payload.files?.map((f) => ({
+          name: f.name,
+          size: f.content.length,
+        })),
+      });
+
       const result = await this.executeService.execute(payload, userId);
 
-      const executionStats = JSON.stringify({
+      const executionStats = {
         exitCode: result.exitCode,
         timedOut: result.timedOut,
         wallTime: result.wallTime,
+        testsPassed: result.result?.passed,
+        testsFailed: result.result?.failed,
+        testsErrors: result.result?.errors,
+        completed: result.result?.completed,
+      };
+
+      this.logger.debug('Code execution completed', {
+        userId,
+        algorithmId: payload.algorithmId,
+        executionStats,
+        hasOutput: !!result.stdout,
+        hasErrors: !!result.stderr,
       });
+
       this.logger.log(`Code execution completed successfully`, {
         executionStats,
       });
 
       return result;
     } catch (error) {
+      this.logger.debug('Code execution failed with error', {
+        userId,
+        algorithmId: payload.algorithmId,
+        errorName: error.name,
+        errorMessage: error.message,
+        stackTrace: error.stack,
+      });
+
       this.logger.error('Code execution failed', error.stack);
       throw error;
     }
