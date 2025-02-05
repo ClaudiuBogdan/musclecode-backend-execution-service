@@ -1,4 +1,5 @@
 import { TestItem, CodeExecutionResponse } from 'src/execute/interfaces';
+import { StructuredLogger } from 'src/logger/structured-logger.service';
 
 interface JestAssertionResult {
   ancestorTitles: string[];
@@ -33,6 +34,8 @@ interface JestOutput {
   stdout?: string;
   stderr?: string;
 }
+
+const logger = new StructuredLogger('TestExecutionResult::Typescript');
 
 export const createTestHierarchy = (
   testResults: JestAssertionResult[],
@@ -155,6 +158,16 @@ export const formatTypeScriptError = (errorMessage: string): string => {
 export const createExecutionResponse = (
   jestOutput: JestOutput,
 ): CodeExecutionResponse => {
+  logger.debug('Starting test execution response creation', {
+    numRuntimeErrorTestSuites: jestOutput.numRuntimeErrorTestSuites,
+    numTestResults: jestOutput.testResults?.length,
+    success: jestOutput.success,
+    numPassedTestSuites: jestOutput.numPassedTestSuites,
+    numTotalTestSuites: jestOutput.numTotalTestSuites,
+    numPassedTests: jestOutput.numPassedTests,
+    numTotalTests: jestOutput.numTotalTests,
+  });
+
   // Handle compilation errors
   if (
     jestOutput.numRuntimeErrorTestSuites > 0 &&
@@ -163,15 +176,26 @@ export const createExecutionResponse = (
     const errorMessage = formatTypeScriptError(
       jestOutput.testResults[0].message,
     );
+    logger.debug('Compilation error', {
+      errorMessage,
+    });
     return createErrorResponse(errorMessage, true);
   }
 
   // Handle no test results
   if (!jestOutput.testResults || jestOutput.testResults.length === 0) {
+    logger.debug('No test results found.');
     return createErrorResponse('No test results found.', false);
   }
 
   const testResults = jestOutput.testResults[0];
+  logger.debug('Processing first test result', {
+    hasAssertionResults: testResults.assertionResults?.length > 0,
+    status: testResults.status,
+    hasMessage: !!testResults.message,
+    hasConsole: !!testResults.console?.length,
+  });
+
   const passed = testResults.assertionResults.filter(
     (t) => t.status === 'passed',
   ).length;
@@ -181,6 +205,15 @@ export const createExecutionResponse = (
   const errors = testResults.assertionResults.filter((t) =>
     ['pending', 'todo', 'disabled'].includes(t.status),
   ).length;
+
+  logger.debug('Test execution results', {
+    passed,
+    failed,
+    errors,
+    numPassedTestSuites: jestOutput.numPassedTestSuites,
+    numTotalTestSuites: jestOutput.numTotalTestSuites,
+    success: jestOutput.success,
+  });
 
   // Collect console output from test results
   const consoleOutput = testResults.console || [];
@@ -205,7 +238,23 @@ export const createExecutionResponse = (
 
   const testItems = createTestHierarchy(testResults.assertionResults);
   const totalTests = passed + failed + errors;
-  const allTestsPassed = passed > 0 && failed === 0 && errors === 0;
+  const allTestsPassed =
+    (passed > 0 && failed === 0 && errors === 0) || // Has passing assertions
+    (totalTests === 0 &&
+      jestOutput.success === true && // No assertions but suite passed
+      jestOutput.numPassedTestSuites === jestOutput.numTotalTestSuites);
+
+  logger.debug('Test pass/fail determination', {
+    totalTests,
+    allTestsPassed,
+    hasPassingAssertions: passed > 0 && failed === 0 && errors === 0,
+    hasNoTestsButSuitePassed:
+      totalTests === 0 &&
+      jestOutput.success === true &&
+      jestOutput.numPassedTestSuites === jestOutput.numTotalTestSuites,
+    testItemsCount: testItems.length,
+  });
+
   const wallTime = testResults.endTime - testResults.startTime;
 
   // Collect all error messages
@@ -219,20 +268,33 @@ export const createExecutionResponse = (
     .join('\n')
     .trim();
 
+  logger.debug('Preparing final response', {
+    responseType: allTestsPassed ? 'execution success' : 'execution error',
+    hasStdout: !!stdout,
+    hasStderr: !!stderr,
+    hasFinalErrorMessage: !!finalErrorMessage,
+    wallTime,
+    testTime: testResults.assertionResults[0]?.duration,
+  });
+
   return {
     type: allTestsPassed ? 'execution success' : 'execution error',
     stdout,
-    stderr: stderr || finalErrorMessage, // Include error messages in stderr if no other stderr content
+    stderr: stderr || finalErrorMessage,
     exitCode: allTestsPassed ? 0 : 1,
     wallTime,
     timedOut: false,
     message:
       finalErrorMessage ||
-      (allTestsPassed ? 'All tests passed' : 'Some tests failed'),
+      (allTestsPassed
+        ? totalTests > 0
+          ? 'All tests passed'
+          : `All test suites passed`
+        : 'Some tests failed'),
     token: '',
     result: {
       serverError: false,
-      completed: allTestsPassed && totalTests > 0,
+      completed: allTestsPassed,
       output: testItems,
       successMode: 'assertions',
       passed,
