@@ -7,6 +7,7 @@ import {
   validateSync,
 } from 'class-validator';
 import { plainToInstance, Transform } from 'class-transformer';
+import { LogLevel } from 'src/logger/interfaces';
 
 export enum NodeEnv {
   Development = 'development',
@@ -47,9 +48,9 @@ export class EnvironmentVariables {
   @Transform(({ value }) => Number(value))
   FLUSH_INTERVAL: number = 5000;
 
-  @IsString()
+  @IsEnum(LogLevel)
   @IsOptional()
-  LOG_LEVEL: string = 'INFO';
+  LOG_LEVEL: LogLevel = LogLevel.Info;
 
   @IsEnum(NodeEnv)
   @IsOptional()

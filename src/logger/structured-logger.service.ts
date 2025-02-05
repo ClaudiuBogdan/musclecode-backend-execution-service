@@ -34,9 +34,19 @@ export class StructuredLogger extends ConsoleLogger implements OnModuleDestroy {
     return logEntry;
   }
 
+  debug(message: string, extraInfo?: string | Record<string, any>): void {
+    this.addDefaultMetadata();
+    this.logger.debug(message, this.formatExtraInfo(extraInfo));
+  }
+
   log(message: string, extraInfo?: string | Record<string, any>): void {
     this.addDefaultMetadata();
     this.logger.info(message, this.formatExtraInfo(extraInfo));
+  }
+
+  warn(message: string, extraInfo?: string | Record<string, any>): void {
+    this.addDefaultMetadata();
+    this.logger.warn(message, this.formatExtraInfo(extraInfo));
   }
 
   error(
@@ -50,21 +60,6 @@ export class StructuredLogger extends ConsoleLogger implements OnModuleDestroy {
     });
     this.addDefaultMetadata();
     this.logger.error(message, logEntry);
-  }
-
-  warn(message: string, extraInfo?: string | Record<string, any>): void {
-    this.addDefaultMetadata();
-    this.logger.warn(message, this.formatExtraInfo(extraInfo));
-  }
-
-  debug(message: string, extraInfo?: string | Record<string, any>): void {
-    this.addDefaultMetadata();
-    this.logger.debug(message, this.formatExtraInfo(extraInfo));
-  }
-
-  verbose(message: string, extraInfo?: string | Record<string, any>): void {
-    this.addDefaultMetadata();
-    this.logger.verbose(message, this.formatExtraInfo(extraInfo));
   }
 
   private getUserId(): string | undefined {

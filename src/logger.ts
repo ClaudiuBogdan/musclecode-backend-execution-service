@@ -52,8 +52,6 @@ const resource = new Resource({
   'k8s.pod.name': config.K8S_POD_NAME,
 });
 
-console.log('Logger resources', resource);
-
 // Construct the OTLP URL using protocol, host, port, and path
 const otlpUrl = config.LOG_ENDPOINT;
 
