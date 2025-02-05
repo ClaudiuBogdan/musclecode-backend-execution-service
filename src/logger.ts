@@ -82,7 +82,7 @@ const otelLogger = loggerProvider.getLogger('winston-logger');
 
 // Create and configure the Winston logger with both Console and Signoz transports
 const logger = winston.createLogger({
-  level: config.LOG_LEVEL,
+  level: config.LOG_LEVEL || 'debug',
   defaultMeta: { attributes: {} },
   transports: [
     new winston.transports.Console({
