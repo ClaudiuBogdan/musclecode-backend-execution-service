@@ -5,23 +5,45 @@ import { createExecutionResponse } from './testExecutionResult';
 import { AlgorithmFile } from 'src/execute/interfaces';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
+import { StructuredLogger } from 'src/logger/structured-logger.service';
 
 const TEMPLATE_DIR = join(process.cwd(), 'templates/typescript');
+const logger = new StructuredLogger('TypeScriptExecutor');
 
 export class TypeScriptExecutor implements CodeExecutionStrategy {
   async execute(codePath: string) {
+    logger.debug('Starting TypeScript code execution', {
+      codePath,
+      templateDir: TEMPLATE_DIR,
+    });
+
     try {
-      // No need to install dependencies as they are already in the template
+      logger.debug('Running Vitest tests');
       await exec(
         codePath,
         'npx vitest run --reporter json --outputFile=./test-output.json',
       );
+
+      logger.debug('Reading test output file');
       const vitestOutput = JSON.parse(
         await readFile(join(codePath, 'test-output.json'), 'utf8'),
       );
 
+      logger.debug('Test execution completed', {
+        numTestSuites: vitestOutput.numTotalTestSuites,
+        numTests: vitestOutput.numTotalTests,
+        success: vitestOutput.success,
+        vitestOutput,
+      });
+
       return createExecutionResponse(vitestOutput);
     } catch (err) {
+      logger.debug('Test execution failed', {
+        errorName: err.name,
+        errorMessage: err.message,
+        stackTrace: err.stack,
+      });
+
       return createExecutionResponse({
         testResults: [
           {
@@ -50,14 +72,39 @@ export class TypeScriptExecutor implements CodeExecutionStrategy {
 }
 
 export class TypeScriptFileWriter implements FileWriterStrategy {
-  async write(filePath: string, files: AlgorithmFile[]): Promise<void> {
-    // Set up symlinks for template files and create src directory
-    await setupTemplateSymlinks(TEMPLATE_DIR, filePath);
+  private readonly logger = new StructuredLogger('TypeScriptFileWriter');
 
-    // Write user files to src directory
-    const srcDir = join(filePath, 'src');
-    for (const file of files) {
-      await createFile(file, srcDir);
+  async write(filePath: string, files: AlgorithmFile[]): Promise<void> {
+    this.logger.debug('Starting TypeScript file setup', {
+      filePath,
+      templateDir: TEMPLATE_DIR,
+      fileCount: files.length,
+    });
+
+    try {
+      // Set up symlinks for template files and create src directory
+      this.logger.debug('Setting up template symlinks');
+      await setupTemplateSymlinks(TEMPLATE_DIR, filePath);
+
+      // Write user files to src directory
+      const srcDir = join(filePath, 'src');
+      this.logger.debug('Writing user files', {
+        srcDir,
+        files: files.map((f) => ({ name: f.name, size: f.content.length })),
+      });
+
+      for (const file of files) {
+        await createFile(file, srcDir);
+      }
+
+      this.logger.debug('TypeScript file setup completed successfully');
+    } catch (error) {
+      this.logger.debug('TypeScript file setup failed', {
+        errorName: error.name,
+        errorMessage: error.message,
+        stackTrace: error.stack,
+      });
+      throw error;
     }
   }
 }

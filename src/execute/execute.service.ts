@@ -14,7 +14,6 @@ export class ExecuteService {
     payload: ExecuteCodeDTO,
     userId: string,
   ): Promise<CodeExecutionResponse> {
-    // Use process.cwd() to get the current working directory in both environments
     const basePath = path.join(process.cwd(), 'code');
     const filesPath = path.join(
       basePath,
@@ -22,34 +21,90 @@ export class ExecuteService {
       payload.algorithmId ? path.basename(payload.algorithmId) : 'temp',
     );
 
-    this.logger.log(`Setting up execution environment`, {
+    this.logger.debug('Initializing execution environment', {
+      userId,
+      algorithmId: payload.algorithmId,
+      language: payload.language,
+      basePath,
       filesPath,
+      fileCount: payload.files.length,
     });
 
     try {
       const startTime = process.hrtime();
 
       // Create files and directories
-      this.logger.log('Creating execution files');
+      this.logger.debug('Creating execution files', {
+        filesPath,
+        files: payload.files.map((f) => ({
+          name: f.name,
+          size: f.content.length,
+        })),
+      });
+
       await this.fileService.createFiles(filesPath, payload);
 
+      const [setupSeconds, setupNanoseconds] = process.hrtime(startTime);
+      const setupTimeMs = (
+        setupSeconds * 1000 +
+        setupNanoseconds / 1e6
+      ).toFixed(2);
+
+      this.logger.debug('Files created successfully', {
+        setupTimeMs,
+        filesPath,
+      });
+
       // Execute code
-      this.logger.log('Starting code execution');
+      this.logger.debug('Starting code execution', {
+        language: payload.language,
+        filesPath,
+      });
+
+      const executionStartTime = process.hrtime();
       const results = await executeCode(filesPath, payload.language);
 
-      const [seconds, nanoseconds] = process.hrtime(startTime);
-      const totalTimeMs = (seconds * 1000 + nanoseconds / 1e6).toFixed(2);
+      const [execSeconds, execNanoseconds] = process.hrtime(executionStartTime);
+      const executionTimeMs = (
+        execSeconds * 1000 +
+        execNanoseconds / 1e6
+      ).toFixed(2);
 
-      this.logger.log(`Code execution completed.`, {
+      const [totalSeconds, totalNanoseconds] = process.hrtime(startTime);
+      const totalTimeMs = (
+        totalSeconds * 1000 +
+        totalNanoseconds / 1e6
+      ).toFixed(2);
+
+      this.logger.debug('Code execution metrics', {
+        setupTimeMs,
+        executionTimeMs,
+        totalTimeMs,
         exitCode: results.exitCode,
         timedOut: results.timedOut,
         wallTime: results.wallTime,
-        totalTimeMs,
+        hasOutput: !!results.stdout,
+        hasErrors: !!results.stderr,
+        testResults: results.result
+          ? {
+              completed: results.result.completed,
+              passed: results.result.passed,
+              failed: results.result.failed,
+              errors: results.result.errors,
+            }
+          : null,
       });
 
       return results;
     } catch (error) {
-      this.logger.log('Execution failed', error.stack);
+      this.logger.debug('Execution error details', {
+        errorName: error.name,
+        errorMessage: error.message,
+        stackTrace: error.stack,
+        filesPath,
+      });
+
+      this.logger.error('Execution failed', error.stack);
 
       return {
         type: 'execution error',
@@ -86,8 +141,15 @@ export class ExecuteService {
       };
     } finally {
       // Clean up files after execution
-      this.logger.log('Cleaning up execution environment');
+      this.logger.debug('Starting cleanup of execution environment', {
+        filesPath,
+      });
+
       await this.fileService.removeDirectory(filesPath);
+
+      this.logger.debug('Cleanup completed', {
+        filesPath,
+      });
     }
   }
 }
