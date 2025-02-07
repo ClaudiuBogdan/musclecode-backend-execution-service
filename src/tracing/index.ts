@@ -8,7 +8,7 @@ import {
   ATTR_SERVICE_VERSION,
   SEMRESATTRS_DEPLOYMENT_ENVIRONMENT,
 } from '@opentelemetry/semantic-conventions';
-import { config } from './config/load-config';
+import { config } from '../config/load-config';
 import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
 import { NestInstrumentation } from '@opentelemetry/instrumentation-nestjs-core';
 
