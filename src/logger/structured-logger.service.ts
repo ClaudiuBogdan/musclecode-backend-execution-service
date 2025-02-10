@@ -67,7 +67,7 @@ export class StructuredLogger extends ConsoleLogger implements OnModuleDestroy {
   }
 
   private addDefaultMetadata() {
-    const user_id = this.getUserId();
+    const userId = this.getUserId();
     if (!this.logger.defaultMeta) {
       this.logger.defaultMeta = {
         attributes: {
@@ -75,8 +75,8 @@ export class StructuredLogger extends ConsoleLogger implements OnModuleDestroy {
         },
       };
     }
-    if (user_id) {
-      this.logger.defaultMeta.attributes.user_id = user_id;
+    if (userId) {
+      this.logger.defaultMeta.attributes['user.id'] = userId;
     }
     if (this.context) {
       const defaultMetadata = this.logger.defaultMeta || {};

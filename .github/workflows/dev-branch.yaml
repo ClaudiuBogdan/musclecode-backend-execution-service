@@ -40,6 +40,7 @@ jobs:
         run: |
           cd ./k8s/base
           kustomize edit set image harbor.devostack.com/musclecode/musclecode-backend-execution-service=harbor.devostack.com/musclecode/musclecode-backend-execution-service:${{ github.sha }}
+          kustomize edit set annotation image-sha=${{ github.sha }}
 
       - name: Commit and Push Changes
         env:

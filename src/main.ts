@@ -24,7 +24,7 @@ async function bootstrap() {
       'Failed to start application: ' +
         (error instanceof Error ? error.message : String(error)),
     );
-    process.exit(1);
+    setTimeout(() => process.exit(1), 1000);
   }
 }
 

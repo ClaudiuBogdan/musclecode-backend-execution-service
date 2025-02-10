@@ -2,13 +2,13 @@ import * as Transport from 'winston-transport';
 import { Logger } from '@opentelemetry/api-logs';
 
 interface SignozTransportOptions extends Transport.TransportStreamOptions {
-  otelLogger?: Logger;
+  otelLogger: Logger;
 }
 
 export class SignozTransport extends Transport {
   private otelLogger: Logger;
 
-  constructor(opts?: SignozTransportOptions) {
+  constructor(opts: SignozTransportOptions) {
     super(opts);
     this.otelLogger = opts.otelLogger;
   }

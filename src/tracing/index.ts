@@ -11,6 +11,7 @@ import {
 import { config } from '../config/load-config';
 import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
 import { NestInstrumentation } from '@opentelemetry/instrumentation-nestjs-core';
+import { IncomingMessage } from 'http';
 
 const traceExporter = new OTLPTraceExporter({
   url: config.TRACE_ENDPOINT,
@@ -20,8 +21,8 @@ const propagator = new W3CTraceContextPropagator();
 
 export const otelSDK = new NodeSDK({
   resource: new Resource({
-    [ATTR_SERVICE_NAME]: config.APP_NAME || 'my-service',
-    [ATTR_SERVICE_VERSION]: config.APP_VERSION || '0.1.0',
+    [ATTR_SERVICE_NAME]: config.APP_NAME,
+    [ATTR_SERVICE_VERSION]: config.APP_VERSION,
     [SEMRESATTRS_DEPLOYMENT_ENVIRONMENT]: config.NODE_ENV,
     // Kubernetes specific attributes
     'k8s.node.name': config.HOSTNAME,
@@ -41,6 +42,16 @@ export const otelSDK = new NodeSDK({
           const urlPath = req.url.split('?')[0];
           // Filter out only the /healthz endpoint from being instrumented
           return urlPath === '/healthz';
+        },
+        // The requestHook lets you add custom attributes from the request
+        requestHook: (span, request) => {
+          if (request instanceof IncomingMessage) {
+            const headers = request.headers;
+            const userId = headers['x-user-id'];
+            if (userId) {
+              span.setAttribute('user.id', userId);
+            }
+          }
         },
       },
     }),
