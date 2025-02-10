@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: musclecode-backend-execution-service
   annotations:
-    image-sha: latest
+    devostack.com/image-sha: latest
 spec:
   replicas: 1
   selector:
@@ -46,7 +46,7 @@ spec:
             - name: APP_VERSION
               valueFrom:
                 fieldRef:
-                  fieldPath: metadata.annotations['image-sha']
+                  fieldPath: metadata.annotations['devostack.com/image-sha']
             - name: K8S_DEPLOYMENT_NAME
               valueFrom:
                 fieldRef:
