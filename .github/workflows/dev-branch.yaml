@@ -31,16 +31,24 @@ jobs:
           username: ${{ env.DOCKER_USERNAME }}
           password: ${{ env.DOCKER_PASSWORD }}
 
+      - name: Install yq
+        run: |
+          wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
+          chmod +x /usr/local/bin/yq
+        
       - name: Build and Push Docker Image
         run: |
           docker build -t ${{ env.DOCKER_REGISTRY_URL }}/musclecode-backend-execution-service:${{ github.sha }} .
           docker push ${{ env.DOCKER_REGISTRY_URL }}/musclecode-backend-execution-service:${{ github.sha }}
 
-      - name: Update Image Tag in Kustomization
+      - name: Update Image Tag and SHA in Kustomization
         run: |
           cd ./k8s/base
           kustomize edit set image harbor.devostack.com/musclecode/musclecode-backend-execution-service=harbor.devostack.com/musclecode/musclecode-backend-execution-service:${{ github.sha }}
           kustomize edit set annotation devostack.com/image-sha=${{ github.sha }}
+
+          # Update the image-sha annotation in the strategic merge patch using yq
+          yq -i '(.patches[] | select(.target.kind == "Deployment") | .patch | select(.spec.template.metadata.annotations."image-sha" != null)).spec.template.metadata.annotations."image-sha" = "${{ github.sha }}"' kustomization.yaml
 
       - name: Commit and Push Changes
         env:

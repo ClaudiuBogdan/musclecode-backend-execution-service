@@ -11,10 +11,22 @@ commonLabels:
   app.kubernetes.io/name: musclecode-backend-execution-service
   app.kubernetes.io/part-of: musclecode
 
+patches:
+- patch: |-
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: musclecode-backend-execution-service
+    spec:
+      template:
+        metadata:
+          annotations:
+            image-sha: 771f54e25c90d5102fe34e507ba25a42a2bc1e98
+  target:
+    kind: Deployment
+    name: musclecode-backend-execution-service
 
 images:
 - name: harbor.devostack.com/musclecode/musclecode-backend-execution-service
   newName: harbor.devostack.com/musclecode/musclecode-backend-execution-service
   newTag: 771f54e25c90d5102fe34e507ba25a42a2bc1e98
-commonAnnotations:
-  devostack.com/image-sha: 67e9e107b614c05fce6fa3b44ed787c7ee70e14c
