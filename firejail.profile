@@ -11,6 +11,10 @@ disable-mnt
 # Make the home directory inaccessible and provide a new temporary home
 private
 
+# Allow access to the /app/code directory
+whitelist /app/code
+whitelist /app/templates
+
 # Restrict access to the /proc and /sys directories, which contain system and process information
 proc none
 sysfs none
@@ -41,3 +45,7 @@ seccomp
 
 # Drop all capabilities to minimize privileges further
 caps.drop all
+
+shell none
+memory-deny-write-execute  # Prevent code injection attacks
+noexec /tmp  # Extra protection for temp space
