@@ -1,10 +1,13 @@
 import { exec as execCmd } from 'child_process';
 import { config } from '../config/load-config';
+import { StructuredLogger } from 'src/logger/structured-logger.service';
 
 export interface ExecOptions {
   shouldThrowError?: boolean;
   timeoutMs?: number;
 }
+
+const logger = new StructuredLogger('Exec');
 
 export async function exec(
   codePath: string,
@@ -34,6 +37,7 @@ export async function exec(
         if (options.shouldThrowError && stderr) {
           reject(stderr);
         }
+        logger.debug('stdout', { stdout });
         resolve(stdout);
       },
     );
