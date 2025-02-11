@@ -10,7 +10,9 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 3000
+      name: http
     - protocol: TCP
       port: 9229
       targetPort: 9229
+      name: debug
   type: ClusterIP
