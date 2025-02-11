@@ -23,5 +23,6 @@ export default defineConfig({
     failFast: false,
     silent: false,
     reporters: ['json'],
+    outputFile: 'test-output.json',
   },
 });
