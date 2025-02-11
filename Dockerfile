@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* && \
     curl -sL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y nodejs && \
-    npm install -g yarn 
+    npm install -g yarn nodemon
 
 # Install jest dependencies
 RUN yarn global add jest ts-jest @types/jest 
@@ -112,8 +112,8 @@ COPY --chown=app_user:app_user --from=build /app/node_modules ./node_modules
 COPY --chown=app_user:app_user --from=build /app/templates ./templates
 COPY --chown=app_user:app_user firejail.profile /app/firejail.profile
 
-# Expose the port the app runs on
-EXPOSE 3000
+# Expose the application and debug ports
+EXPOSE 3000 9229
 
 # Added chown command to ensure /app is writable by app_user
 USER root
@@ -121,4 +121,7 @@ RUN chown -R app_user:app_user /app
 
 USER app_user
 
-CMD ["node", "dist/main.js"]
+# Use shell form to support environment variable expansion
+COPY --chown=app_user:app_user docker-entrypoint.sh /app/
+RUN chmod +x /app/docker-entrypoint.sh
+ENTRYPOINT ["/app/docker-entrypoint.sh"]

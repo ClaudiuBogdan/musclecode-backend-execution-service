@@ -21,12 +21,20 @@ spec:
           image: harbor.devostack.com/musclecode/musclecode-backend-execution-service:latest
           ports:
             - containerPort: 3000
+              name: http
+            - containerPort: 9229
+              name: debug
           envFrom:
             - secretRef:
                 name: musclecode-backend-execution-service-secrets
             - configMapRef:
                 name: musclecode-execution-worker-config
           env:
+            - name: DEBUG_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: musclecode-execution-worker-config
+                  key: DEBUG_MODE
             - name: K8S_POD_NAME
               valueFrom:
                 fieldRef:
@@ -81,7 +89,11 @@ spec:
           volumeMounts:
             - name: code-execution
               mountPath: /app/code
+            - name: tmp
+              mountPath: /tmp
 
       volumes:
         - name: code-execution
+          emptyDir: {}
+        - name: tmp
           emptyDir: {}

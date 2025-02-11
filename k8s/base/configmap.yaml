@@ -10,7 +10,10 @@ data:
   APP_NAME: "musclecode-backend-execution-service"
   NODE_ENV: "production"
   APP_PORT: "3000"
-  
+
+  # Debug Configuration
+  DEBUG_MODE: "true"
+
   # Logging Configuration
   LOG_LEVEL: "debug"
   LOG_BATCH_SIZE: "100"
