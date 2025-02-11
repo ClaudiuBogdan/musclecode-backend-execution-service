@@ -6,7 +6,7 @@
     "test": "vitest"
   },
   "dependencies": {
-    "vitest": "^3.0.4",
+    "vitest": "^3.0.5",
     "typescript": "^5.3.3",
     "@types/node": "^20.11.0"
   }

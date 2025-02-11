@@ -63,3 +63,6 @@ templates/python/venv
 # Kubernetes
 *.secret.yaml
 *.secret.yml
+
+# Code
+code/*

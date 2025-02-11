@@ -1,25 +1,28 @@
-version: '3.8'
-
 services:
-  musclecode-execution-worker:
+  musclecode-execution-worker-dev:
     build:
       context: .
-      target: prod  # Use production build
-    container_name: musclecode-execution-worker
+      dockerfile: Dockerfile.local
+    container_name: musclecode-execution-worker-dev
     ports:
-      - "3002:3002"  # Use port 3002
+      - "3002:3002"
     env_file:
       - .env
     environment:
-      - APP_PORT=3002  # Set the application port
+      - APP_PORT=3002
+      - NODE_ENV=development
     volumes:
-      - code-execution:/app/code  # Mount in app directory
+      - ./src:/app/src  # Only mount the src directory for development
+      - /app/node_modules  # Preserve container node_modules
+      - /app/templates  # Preserve container templates and their node_modules
+      - ./code:/app/code  # Bind mount for code execution
     security_opt:
-      - apparmor=unconfined  # Required for Firejail
+      - apparmor=unconfined
     cap_add:
-      - SYS_ADMIN  # Required for Firejail
+      - SYS_ADMIN
+    working_dir: /app
+    command: yarn start:dev
 
 volumes:
   code-execution:
-    name: musclecode-code-execution
-
+    name: musclecode-code-execution-dev 

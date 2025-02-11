@@ -19,11 +19,7 @@ export class TypeScriptExecutor implements CodeExecutionStrategy {
 
     try {
       logger.debug('Running Vitest tests');
-      await exec(
-        codePath,
-        'npx vitest run --reporter json --outputFile=./test-output.json',
-      );
-
+      await exec(codePath, 'npx vitest run --config=vitest.config.ts');
       logger.debug('Reading test output file');
       const vitestOutput = JSON.parse(
         await readFile(join(codePath, 'test-output.json'), 'utf8'),
