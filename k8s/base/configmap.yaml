@@ -12,7 +12,7 @@ data:
   APP_PORT: "3000"
 
   # Debug Configuration
-  DEBUG_MODE: "true"
+  DEBUG_MODE: "false"
 
   # Logging Configuration
   LOG_LEVEL: "debug"
