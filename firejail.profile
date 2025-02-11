@@ -12,8 +12,7 @@ disable-mnt
 private
 
 # Allow access to the /app/code directory
-whitelist /app/code
-whitelist /app/templates
+read-write /app/code
 
 # Restrict access to the /proc and /sys directories, which contain system and process information
 proc none
