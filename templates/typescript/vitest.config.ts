@@ -21,7 +21,7 @@ export default defineConfig({
     },
     cache: false,
     failFast: false,
-    silent: true,
+    silent: false,
     reporters: ['json'],
   },
 });

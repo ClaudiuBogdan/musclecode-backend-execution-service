@@ -37,7 +37,7 @@ export async function exec(
         if (options.shouldThrowError && stderr) {
           reject(stderr);
         }
-        logger.debug('stdout', { stdout });
+        logger.debug('stdout', stdout);
         resolve(stdout);
       },
     );
