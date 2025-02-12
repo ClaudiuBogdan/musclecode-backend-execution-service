@@ -85,9 +85,13 @@ RUN mkdir -p dist/templates
 COPY templates ./templates
 
 # Install template dependencies
-RUN cd templates/typescript && yarn --frozen-lockfile --production && cd ../.. && \
+RUN echo "Installing Typescript template dependencies..." && \
+    cd templates/typescript && yarn --frozen-lockfile --production && cd ../.. && \
+    echo "Installing Javascript template dependencies..." && \
     cd templates/javascript && yarn --frozen-lockfile --production && cd ../.. && \
-    . /opt/venv/bin/activate && \
+    echo "Installing Python template dependencies..." && \
+    python3 -m venv templates/python/venv && \
+    . templates/python/venv/bin/activate && \
     cd templates/python && pip3 install -r requirements.txt && cd ../..
 
 # Copy templates to dist
@@ -119,6 +123,15 @@ EXPOSE 3000 9229
 # Added chown command to ensure /app is writable by app_user
 USER root
 RUN chown -R app_user:app_user /app
+
+RUN if [ ! -d /app/templates/python/venv ]; then \
+    echo "Creating Python virtual environment in production..."; \
+    python3 -m venv /app/templates/python/venv && \
+    . /app/templates/python/venv/bin/activate && \
+    cd /app/templates/python && pip3 install -r requirements.txt; \
+    else \
+    echo "Python virtual environment already exists in production."; \
+    fi
 
 USER app_user
 
