@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   build-push-update:
-    runs-on: arc-runner-backend-execution-service
+    runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:

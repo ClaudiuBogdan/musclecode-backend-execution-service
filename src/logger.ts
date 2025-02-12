@@ -41,8 +41,8 @@ if (!config.LOG_ENDPOINT) {
 
 // Create a Resource to represent this service with Kubernetes metadata
 const resource = new Resource({
-  [ATTR_SERVICE_NAME]: config.APP_NAME || 'my-service',
-  [ATTR_SERVICE_VERSION]: config.APP_VERSION || '0.1.0',
+  [ATTR_SERVICE_NAME]: config.APP_NAME,
+  [ATTR_SERVICE_VERSION]: config.APP_VERSION,
   [SEMRESATTRS_DEPLOYMENT_ENVIRONMENT]: config.NODE_ENV,
   // Kubernetes specific attributes
   'k8s.node.name': config.HOSTNAME,

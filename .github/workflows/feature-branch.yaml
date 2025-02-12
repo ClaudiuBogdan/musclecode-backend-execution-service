@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: arc-runner-backend-execution-service
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       statuses: write
