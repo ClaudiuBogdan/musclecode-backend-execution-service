@@ -58,7 +58,10 @@ export class PythonExecutor implements CodeExecutionStrategy {
         pytestPath,
       });
 
-      const execOutput = await exec(codePath, `${pythonPath} ${pytestPath}`);
+      const execOutput = await exec(
+        codePath,
+        `${pythonPath} ${pytestPath} --json-report --json-report-file=test-output.json`,
+      );
 
       logger.debug('Reading test output file');
       const testOutput = await readFile(
