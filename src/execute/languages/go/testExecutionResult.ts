@@ -94,15 +94,20 @@ export const createExecutionResponse = (
   const totalTests = passed + failed + errors;
   const allTestsPassed = passed > 0 && failed === 0 && errors === 0;
 
+  // Check if this is a compilation error
+  const isCompilationError =
+    result.testResults.length === 1 &&
+    result.testResults[0].name === 'Compilation Error';
+
   return {
-    type: allTestsPassed ? 'execution success' : 'execution error',
+    type: 'execution error',
     stdout: result.stdout,
     stderr: result.stderr,
-    exitCode: allTestsPassed ? 0 : 1,
+    exitCode: 1,
     wallTime:
       result.testResults[0]?.endTime - result.testResults[0]?.startTime || 0,
     timedOut: false,
-    message: allTestsPassed ? 'All tests passed' : 'Some tests failed',
+    message: isCompilationError ? 'Compilation failed' : 'Some tests failed',
     token: '',
     result: {
       serverError: false,

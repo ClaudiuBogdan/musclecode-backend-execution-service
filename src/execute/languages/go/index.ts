@@ -6,8 +6,41 @@ import { AlgorithmFile } from 'src/execute/interfaces';
 
 export class GoExecutor implements CodeExecutionStrategy {
   async execute(codePath: string) {
+    // First try to build the code to catch compilation errors
     try {
-      // Run go test with JSON output and verbose flag for detailed test output
+      await exec(codePath, 'go build ./...', {
+        shouldThrowError: true,
+      });
+    } catch (buildErr) {
+      // Handle compilation errors
+      return createExecutionResponse({
+        testResults: [
+          {
+            name: 'Compilation Error',
+            assertionResults: [],
+            startTime: Date.now(),
+            endTime: Date.now(),
+            status: 'failed',
+          },
+        ],
+        numFailedTestSuites: 1,
+        numFailedTests: 0,
+        numPassedTestSuites: 0,
+        numPassedTests: 0,
+        numTotalTestSuites: 1,
+        numTotalTests: 0,
+        numRuntimeErrorTestSuites: 1,
+        success: false,
+        stdout: '',
+        stderr:
+          buildErr instanceof Error
+            ? buildErr.stack || buildErr.message
+            : String(buildErr),
+      });
+    }
+
+    try {
+      // If build succeeds, run the tests
       const testResult = await exec(codePath, 'go test -v -json ./...');
       const testLines = testResult.split('\n').filter((line) => line.trim());
       const testOutput = testLines.map((line) => JSON.parse(line));
