@@ -18,6 +18,7 @@ export enum CodeLanguage {
 }
 
 export enum AlgorithmFileType {
+  EXERCISE = 'exercise',
   SOLUTION = 'solution',
   TEST = 'test',
 }
