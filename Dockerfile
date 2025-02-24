@@ -31,7 +31,10 @@ RUN curl -LO https://go.dev/dl/go1.24.0.linux-amd64.tar.gz && \
 ENV GOPATH=/go
 ENV PATH="/go/bin:/usr/local/go/bin:$PATH"
 ENV GOCACHE=/tmp/go-build
-RUN mkdir -p /tmp/go-build && chown app_user:app_user /tmp/go-build
+RUN mkdir -p /tmp/go-build && \
+    chmod 777 /tmp/go-build && \
+    mkdir -p /app/code && \
+    chmod 777 /app/code
 
 # Install jest dependencies
 RUN yarn global add jest ts-jest @types/jest 

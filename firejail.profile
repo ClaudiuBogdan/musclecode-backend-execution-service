@@ -11,9 +11,9 @@ disable-mnt
 # Make the home directory inaccessible and provide a new temporary home
 private
 
-# Allow access to the /app/code directory
-# TODO: review this strategy
+# Allow access to the /app/code directory and Go build cache
 read-write /app/code
+read-write /tmp/go-build
 
 # Restrict access to the /proc and /sys directories, which contain system and process information
 proc none
