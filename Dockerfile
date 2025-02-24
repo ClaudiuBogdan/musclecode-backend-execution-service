@@ -15,10 +15,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     apparmor \
     apparmor-utils \
     vim \
+    build-essential \
+    git \
     && rm -rf /var/lib/apt/lists/* && \
     curl -sL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y nodejs && \
     npm install -g yarn nodemon
+
+# Install Go
+RUN curl -LO https://go.dev/dl/go1.24.0.linux-amd64.tar.gz && \
+    echo "dea9ca38a0b852a74e81c26134671af7c0fbe65d81b0dc1c5bfe22cf7d4c8858  go1.24.0.linux-amd64.tar.gz" | sha256sum -c - && \
+    tar -C /usr/local -xzf go1.24.0.linux-amd64.tar.gz && \
+    rm go1.24.0.linux-amd64.tar.gz
+
+ENV GOPATH=/go
+ENV PATH="/go/bin:/usr/local/go/bin:$PATH"
 
 # Install jest dependencies
 RUN yarn global add jest ts-jest @types/jest 
