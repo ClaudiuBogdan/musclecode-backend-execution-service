@@ -35,6 +35,11 @@ interface PytestSummary {
 
 interface PytestResult {
   tests: PytestTest[];
+  collectors: Array<{
+    nodeid: string;
+    outcome: 'passed' | 'failed';
+    longrepr?: string;
+  }>;
   summary: PytestSummary;
   stdout: string;
   stderr: string;
@@ -66,6 +71,19 @@ export class PythonExecutor implements CodeExecutionStrategy {
         'utf8',
       );
       const result = JSON.parse(testOutput) as PytestResult;
+
+      // Check for collection errors
+      const collectionError = result.collectors.find(
+        (c) => c.outcome === 'failed',
+      )?.longrepr;
+      if (collectionError) {
+        logger.debug('Test collection failed', { collectionError });
+        return createErrorResponse(
+          execOutput,
+          this.cleanErrorStack(collectionError),
+          true,
+        );
+      }
 
       logger.debug('Test execution completed', {
         totalTests: result.summary.total,
@@ -107,6 +125,35 @@ export class PythonExecutor implements CodeExecutionStrategy {
         err instanceof Error ? err.stack || err.message : String(err);
       return createErrorResponse('', errorMessage, true);
     }
+  }
+
+  private cleanErrorStack(error: string): string {
+    return error
+      .split('\n')
+      .filter((line) => {
+        // Remove pytest internals and Python framework paths
+        const isFrameworkLine =
+          /(\/_pytest\/|importlib|_bootstrap|site-packages)/.test(line) ||
+          line.startsWith('    ???') ||
+          /^<.*>:\d+: in /.test(line);
+
+        // Keep user code lines and actual error messages
+        const isUserCode =
+          /(\/src\/|^E\s+|^Error|^\w+Error:)/.test(line) ||
+          line.trim().startsWith('File "');
+
+        return !isFrameworkLine && isUserCode;
+      })
+      .map(
+        (line) =>
+          line
+            .replace(/^E\s+/, '')
+            .replace(/^_+/, '')
+            .replace(/\?{3,}/g, '')
+            .replace(/at 0x[0-9a-f]+>/, ''), // Remove memory addresses
+      )
+      .join('\n')
+      .trim();
   }
 }
 
