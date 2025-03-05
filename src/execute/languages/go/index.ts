@@ -19,7 +19,7 @@ export class GoExecutor implements CodeExecutionStrategy {
     // First try to build the code to catch compilation errors
     try {
       logger.debug('Building Go code');
-      await exec(codePath, './go/bin/go build ./...', {
+      await exec(codePath, './go/bin/go -quiet build ./...', {
         shouldThrowError: true,
       });
     } catch (buildErr) {
@@ -61,7 +61,7 @@ export class GoExecutor implements CodeExecutionStrategy {
       logger.debug('Running Go tests');
       const testResult = await exec(
         codePath,
-        './go/bin/go test -v -json ./...',
+        './go/bin/go -quiet test -v -json ./...',
       );
       const testLines = testResult.split('\n').filter((line) => line.trim());
       const testOutput = testLines.map((line) => JSON.parse(line));
