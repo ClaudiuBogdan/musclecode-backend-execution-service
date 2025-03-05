@@ -23,6 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     npm install -g yarn nodemon
 
 ENV GOCACHE=/tmp/go-build
+ENV GODEBUG=quietsandbox=1
 RUN mkdir -p /tmp/go-build && \
     chmod 777 /tmp/go-build && \
     mkdir -p /app/code && \
