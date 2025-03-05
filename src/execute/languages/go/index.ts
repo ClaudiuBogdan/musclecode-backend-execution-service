@@ -51,8 +51,8 @@ export class GoExecutor implements CodeExecutionStrategy {
         stdout: '',
         stderr:
           buildErr instanceof Error
-            ? buildErr.stack || buildErr.message
-            : String(buildErr),
+            ? this.cleanErrorMessage(buildErr.stack || buildErr.message)
+            : this.cleanErrorMessage(String(buildErr)),
       });
     }
 
@@ -199,6 +199,21 @@ export class GoExecutor implements CodeExecutionStrategy {
         stderr: err instanceof Error ? err.stack || err.message : String(err),
       });
     }
+  }
+
+  /**
+   * Cleans error messages by removing sensitive command information
+   * @param errorMessage The raw error message
+   * @returns A cleaned error message with sensitive command information removed
+   */
+  private cleanErrorMessage(errorMessage: string): string {
+    if (!errorMessage) return '';
+
+    // Remove the command line that contains firejail and build command
+    // This pattern matches lines starting with "Error: Command failed:" and containing "firejail" and "go build"
+    return errorMessage
+      .replace(/Error: Command failed:.*?(firejail|go build).*?\n/g, '')
+      .trim();
   }
 }
 
