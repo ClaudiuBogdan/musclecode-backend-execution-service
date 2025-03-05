@@ -22,14 +22,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-get install -y nodejs && \
     npm install -g yarn nodemon
 
-# Install Go
-RUN curl -LO https://go.dev/dl/go1.24.0.linux-amd64.tar.gz && \
-    echo "dea9ca38a0b852a74e81c26134671af7c0fbe65d81b0dc1c5bfe22cf7d4c8858  go1.24.0.linux-amd64.tar.gz" | sha256sum -c - && \
-    tar -C /usr/local -xzf go1.24.0.linux-amd64.tar.gz && \
-    rm go1.24.0.linux-amd64.tar.gz
-
-ENV GOPATH=/go
-ENV PATH="/go/bin:/usr/local/go/bin:$PATH"
 ENV GOCACHE=/tmp/go-build
 RUN mkdir -p /tmp/go-build && \
     chmod 777 /tmp/go-build && \
@@ -108,12 +100,19 @@ RUN echo "Installing Typescript template dependencies..." && \
     echo "Installing Python template dependencies..." && \
     python3 -m venv templates/python/venv && \
     . templates/python/venv/bin/activate && \
-    cd templates/python && pip3 install -r requirements.txt && cd ../..
+    cd templates/python && pip3 install -r requirements.txt && cd ../.. && \
+    echo "Installing Go template dependencies..." && \
+    mkdir -p templates/go && \
+    cd templates/go && \
+    curl -LO https://go.dev/dl/go1.24.1.linux-amd64.tar.gz && \
+    echo "cb2396bae64183cdccf81a9a6df0aea3bce9511fc21469fb89a0c00470088073  go1.24.1.linux-amd64.tar.gz" | sha256sum -c - && \
+    tar -xzf go1.24.1.linux-amd64.tar.gz && \
+    rm go1.24.1.linux-amd64.tar.gz && \
+    cd ../..
 
 # Copy templates to dist
 RUN cp -r templates/* dist/templates/ && \
     chown -R app_user:app_user /app/dist /app/templates
-
 # Switch back to non-root user
 USER app_user
 

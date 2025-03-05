@@ -1,17 +1,34 @@
 import { CodeExecutionStrategy, FileWriterStrategy } from '../interfaces';
-import { createFile } from 'src/utils/fs';
+import { createFile, setupTemplateSymlinks } from 'src/utils/fs';
 import { exec } from 'src/utils/exec';
 import { createExecutionResponse } from './testExecutionResult';
 import { AlgorithmFile } from 'src/execute/interfaces';
+import { join } from 'path';
+import { StructuredLogger } from 'src/logger/structured-logger.service';
+
+const TEMPLATE_DIR = join(process.cwd(), 'templates/go');
+const logger = new StructuredLogger('GoExecutor');
 
 export class GoExecutor implements CodeExecutionStrategy {
   async execute(codePath: string) {
+    logger.debug('Starting Go code execution', {
+      codePath,
+      templateDir: TEMPLATE_DIR,
+    });
+
     // First try to build the code to catch compilation errors
     try {
-      await exec(codePath, 'go build ./...', {
+      logger.debug('Building Go code');
+      await exec(codePath, './go/bin/go build ./...', {
         shouldThrowError: true,
       });
     } catch (buildErr) {
+      logger.debug('Go build failed', {
+        errorName: buildErr.name,
+        errorMessage: buildErr.message,
+        stackTrace: buildErr.stack,
+      });
+
       // Handle compilation errors
       return createExecutionResponse({
         testResults: [
@@ -41,7 +58,11 @@ export class GoExecutor implements CodeExecutionStrategy {
 
     try {
       // If build succeeds, run the tests
-      const testResult = await exec(codePath, 'go test -v -json ./...');
+      logger.debug('Running Go tests');
+      const testResult = await exec(
+        codePath,
+        './go/bin/go test -v -json ./...',
+      );
       const testLines = testResult.split('\n').filter((line) => line.trim());
       const testOutput = testLines.map((line) => JSON.parse(line));
 
@@ -150,6 +171,12 @@ export class GoExecutor implements CodeExecutionStrategy {
 
       return createExecutionResponse(transformedOutput);
     } catch (err) {
+      logger.debug('Test execution failed', {
+        errorName: err.name,
+        errorMessage: err.message,
+        stackTrace: err.stack,
+      });
+
       return createExecutionResponse({
         testResults: [
           {
@@ -176,31 +203,38 @@ export class GoExecutor implements CodeExecutionStrategy {
 }
 
 export class GoFileWriter implements FileWriterStrategy {
+  private readonly logger = new StructuredLogger('GoFileWriter');
+
   async write(filePath: string, files: AlgorithmFile[]): Promise<void> {
-    // Initialize Go module
-    await exec(filePath, 'go mod init code-execution');
-
-    // Write user files
-    for (const file of files) {
-      if (file.name === 'test') {
-        // _test.go is the convention for test files in Go
-        file.name = 'test_test';
-      }
-      await createFile(file, filePath);
-    }
-
-    // Write go.mod file with required dependencies
-    await createFile(
-      {
-        id: 'go-mod',
-        name: 'go',
-        extension: 'mod',
-        content: `module code-execution
-
-go 1.21
-`,
-      },
+    this.logger.debug('Starting Go file setup', {
       filePath,
-    );
+      templateDir: TEMPLATE_DIR,
+      fileCount: files.length,
+    });
+
+    try {
+      // Set up symlinks for template files
+      this.logger.debug('Setting up template symlinks');
+      await setupTemplateSymlinks(TEMPLATE_DIR, filePath);
+
+      // Process user files
+      this.logger.debug('Writing user files', {
+        srcDir: filePath,
+        files: files.map((f) => ({ name: f.name, extension: f.extension })),
+      });
+
+      for (const file of files) {
+        await createFile(file, filePath);
+      }
+
+      this.logger.debug('Go file setup completed successfully');
+    } catch (error) {
+      this.logger.debug('Go file setup failed', {
+        errorName: error.name,
+        errorMessage: error.message,
+        stackTrace: error.stack,
+      });
+      throw error;
+    }
   }
 }
