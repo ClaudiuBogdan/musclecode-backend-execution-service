@@ -49,3 +49,10 @@ caps.drop all
 shell none
 memory-deny-write-execute  # Prevent code injection attacks
 noexec /tmp  # Extra protection for temp space
+
+# Suppress warnings about existing sandbox detection
+quiet
+ignore quiet-by-default
+
+# Force firejail to run inside Docker
+force

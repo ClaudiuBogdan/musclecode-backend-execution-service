@@ -21,7 +21,7 @@ export async function exec(
   };
   return new Promise((resolve, reject) => {
     execCmd(
-      `cd ${codePath} && ${config.NODE_ENV === 'development' ? '' : 'firejail --config=/app/firejail.profile'} ${command}`,
+      `cd ${codePath} && ${config.NODE_ENV === 'development' ? '' : 'firejail --force --quiet --config=/app/firejail.profile'} ${command}`,
       { timeout: options.timeoutMs },
       (error, stdout, stderr) => {
         if (error?.signal === 'SIGTERM') {
