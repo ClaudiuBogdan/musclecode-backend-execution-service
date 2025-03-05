@@ -21,7 +21,7 @@ patches:
       template:
         metadata:
           annotations:
-            image-sha: 9554fb4bebe0d0defd756f501d947c2774d5aaf4
+            image-sha: afa59ca8413d1cc121af3526d08bf327a92a02a1
   target:
     kind: Deployment
     name: musclecode-backend-execution-service
@@ -29,4 +29,4 @@ patches:
 images:
 - name: harbor.devostack.com/musclecode/musclecode-backend-execution-service
   newName: harbor.devostack.com/musclecode/musclecode-backend-execution-service
-  newTag: 9554fb4bebe0d0defd756f501d947c2774d5aaf4
+  newTag: afa59ca8413d1cc121af3526d08bf327a92a02a1
