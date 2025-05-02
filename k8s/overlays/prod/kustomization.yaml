@@ -34,7 +34,7 @@ patches:
         value: musclecode-prod
       - op: replace
         path: /spec/hosts/0
-        value: "execution-service.api.musclecode.devostack.com"
+        value: "execution.api.musclecode.io"
 
   - target:
       kind: ConfigMap
